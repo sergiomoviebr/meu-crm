@@ -29,10 +29,10 @@ antes de ser marcado como concluído.
 
 ## Próximo passo
 
-**Fase 2, Passo 2.2** — decidir COM O USUÁRIO se vale a pena configurar
-error tracking opcional (Sentry BYO-DSN) agora ou deixar pra depois (é
-opcional no plano aprovado). Se a resposta for "depois", pular direto
-para a Fase 3 (testes). Fase 2.1 (logger estruturado) está concluída.
+**Fase 3, Passo 3.2** — testes de rota para as mutações de dashboard
+mais usadas (`contacts`, `deals`, `broadcasts`), seguindo o padrão de
+`src/app/api/whatsapp/send/route.test.ts`. Fases 1 e 2 concluídas;
+Fase 3.1 (rotas de cron) concluída.
 
 ---
 
@@ -162,7 +162,7 @@ para a Fase 3 (testes). Fase 2.1 (logger estruturado) está concluída.
       um dia precisar liberar (risco de vazamento de bearer key via
       script de terceiro).
 
-## Fase 2 — Observabilidade — 🔄 EM ANDAMENTO
+## Fase 2 — Observabilidade — ✅ CONCLUÍDA
 
 ### 2.1 — `src/lib/logger.ts` — ✅ FEITO
 - [x] `src/lib/logger.ts`: `logger.{debug,info,warn,error}(message, context?)`
@@ -196,18 +196,35 @@ para a Fase 3 (testes). Fase 2.1 (logger estruturado) está concluída.
 - [x] Gate completo: lint (0 erros), typecheck (0 erros), **775/775
       testes** (79 arquivos), build OK.
 
-### 2.2 — Error tracking opcional (BYO Sentry DSN) — decisão pendente
-- [ ] Perguntar ao usuário se isso é prioridade agora ou fica pra depois
-      (é opcional no plano aprovado — só vale a pena se o usuário for
-      operar isso em produção de fato)
+### 2.2 — Error tracking opcional (BYO Sentry DSN) — ✅ DECIDIDO (adiado)
+- [x] Decisão (usuário): deixar pra quando houver produção de verdade.
+      Ambiente ainda é local/dev; o logger estruturado (2.1) já cobre o
+      que precisa por enquanto. Revisitar quando este fork for de fato
+      implantado com tráfego real — seguir o mesmo padrão BYO-key já
+      usado pra chaves de IA (`src/lib/ai/config.ts`), documentado em
+      `docs/engineering-standards.md` → Observability.
 
-## Fase 3 — Testes — ⬜ NÃO INICIADO
+## Fase 3 — Testes — 🔄 EM ANDAMENTO
 
-### 3.1 — Completar lacunas em rotas externas/sensíveis
-- [ ] Levantar quais rotas de webhook/cron ainda não têm teste de rota
-      (não só de `src/lib`) e fechar essas lacunas
+### 3.1 — Completar lacunas em rotas externas/sensíveis — ✅ FEITO
+- [x] Levantamento: só 3 rotas tinham teste de rota antes desta fase
+      (`contacts/[id]/tags`, `whatsapp/send`, `whatsapp/webhook`) de
+      ~50 rotas totais. As duas rotas de cron (`automations/cron`,
+      `flows/cron`) — expostas a um scheduler externo via segredo
+      compartilhado, sem nenhuma outra proteção — não tinham teste
+      nenhum. Essas eram a lacuna de maior risco (rota externa +
+      silenciosa: só o pinger externo chama, uma regressão não
+      apareceria em uso normal do dashboard).
+- [x] `src/app/api/automations/cron/route.test.ts` (4 casos: sem
+      segredo configurado → 503, segredo errado → 401, nada pendente →
+      `{processed:0}`, linha pendente é reivindicada e processada).
+- [x] `src/app/api/flows/cron/route.test.ts` (6 casos: mesmos dois de
+      auth, erro na varredura → 500, sem runs ativos → `{swept:0}`,
+      run parado há mais tempo que o timeout → varrido, run recente →
+      não varrido).
+- [x] Gate completo: **785/785 testes** (81 arquivos), build OK.
 
-### 3.2 — Rotas de mutação do dashboard mais usadas
+### 3.2 — Rotas de mutação do dashboard mais usadas — ⬜ NÃO INICIADO
 - [ ] `contacts`, `deals`, `broadcasts` — seguir o padrão de
       `src/app/api/whatsapp/send/route.test.ts`
 
