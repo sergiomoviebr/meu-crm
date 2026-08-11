@@ -29,6 +29,7 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
+import { logger } from "@/lib/logger";
 import { hasMinRole, isAccountRole, type AccountRole } from "./roles";
 
 // ------------------------------------------------------------
@@ -70,7 +71,7 @@ export function toErrorResponse(err: unknown): NextResponse {
   if (err instanceof UnauthorizedError || err instanceof ForbiddenError) {
     return NextResponse.json({ error: err.message }, { status: err.status });
   }
-  console.error("[toErrorResponse] uncategorized error:", err);
+  logger.error("Uncategorized error", { operation: "auth/account/toErrorResponse", error: err });
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 }
 
@@ -121,7 +122,11 @@ export async function getCurrentAccount(): Promise<AccountContext> {
     .maybeSingle();
 
   if (error) {
-    console.error("[getCurrentAccount] profile fetch error:", error);
+    logger.error("Profile fetch failed", {
+      operation: "auth/account/getCurrentAccount",
+      userId: user.id,
+      error,
+    });
     throw new ForbiddenError("Could not load account context");
   }
   if (!data || !data.account_id || !data.account_role) {
@@ -154,7 +159,12 @@ export async function getCurrentAccount(): Promise<AccountContext> {
     .maybeSingle();
 
   if (accountErr) {
-    console.error("[getCurrentAccount] account fetch error:", accountErr);
+    logger.error("Account fetch failed", {
+      operation: "auth/account/getCurrentAccount",
+      userId: user.id,
+      accountId: data.account_id,
+      error: accountErr,
+    });
     throw new ForbiddenError("Could not load account context");
   }
   if (!account) {

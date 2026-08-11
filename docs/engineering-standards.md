@@ -277,19 +277,45 @@ the concrete threshold for reconsidering. The existing pattern:
 
 ## Observability
 
-Current state: `console.log`/`console.error`/`console.warn` scattered
-across the codebase (~230 call sites), no structured logger, no error
-tracking service. This is the main real gap versus the ideal — see the
-Phase 2 backlog (structured `src/lib/logger.ts`, optional BYO Sentry DSN)
-for the planned fix. Until that lands:
+`src/lib/logger.ts` provides `logger.{debug,info,warn,error}(message,
+context?)` — a thin wrapper over `console.*` (not a new dependency) that
+emits one JSON line per call: `{ level, message, timestamp, ...context }`.
+`context` takes `accountId`/`requestId`/`operation` plus anything else
+worth keeping; an `error` field holding an `Error` instance is expanded
+to `{ name, message, stack }` automatically (raw `Error` objects don't
+serialize their own message/stack through `JSON.stringify`, which is
+exactly how they used to go missing from logs).
 
-- Every `console.error` in a failure path should include enough context to
-  find the record later: which account, which entity id, which operation —
-  follow the existing bracketed-tag convention (`[toErrorResponse]`,
-  `[api/v1]`, `[AuthProvider]`) so failures are at least `grep`-able by
-  origin.
+Migrated so far — the highest-leverage points, not every call site:
+`toErrorResponse()` (`src/lib/auth/account.ts`) and
+`toApiErrorResponse()` (`src/lib/api/v1/respond.ts`), the two functions
+nearly every route's catch block already funnels through; both cron
+routes (`automations/cron`, `flows/cron`); the WhatsApp webhook's two
+outermost catches (`src/app/api/whatsapp/webhook/route.ts`).
+
+**Not migrated**: the remaining ~200+ `console.*` call sites across the
+codebase, including ~23 internal `[webhook]`-tagged logs inside the
+webhook route's helper functions — left as plain `console.*` deliberately
+(migrating a ~1200-line, heavily-tested critical file's every log call in
+one pass is a bigger, riskier change than the observability gap
+justified in one step). Migrate opportunistically: when you're already
+touching a file for other work, switch its `console.error(tag, ...)`
+calls to `logger.error(message, { operation: tag, ...context })`.
+
+- Every log in a failure path should include enough context to find the
+  record later: `accountId`, the entity id, `operation`. The old
+  bracketed-tag convention (`[toErrorResponse]`, `[api/v1]`,
+  `[webhook]`) still applies to unmigrated call sites — it's exactly
+  what `operation` formalizes for migrated ones.
 - Never log a decrypted secret, a full request body that might contain
-  one, or a raw `Authorization` header.
+  one, or a raw `Authorization` header — `logger`'s automatic
+  `Error`-expansion only touches the `error` context field, it doesn't
+  redact anything, so don't pass a secret as log context either.
+
+**Error tracking** (Sentry or similar): not wired up. If you add one,
+follow the same bring-your-own-key pattern already used for AI provider
+keys (`src/lib/ai/config.ts`) — an optional, per-install DSN, never a
+mandatory paid dependency baked into the template.
 
 ## Performance
 

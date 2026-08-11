@@ -29,10 +29,10 @@ antes de ser marcado como concluído.
 
 ## Próximo passo
 
-**Fase 2, Passo 2.1** — criar `src/lib/logger.ts` (wrapper estruturado
-sobre `console.*`) e migrar os pontos mais críticos (webhook do
-WhatsApp, rotas de cron, `toErrorResponse`/`toApiErrorResponse`). Ver
-checklist detalhado na seção "Fase 2" abaixo. Fase 1 está 100% concluída.
+**Fase 2, Passo 2.2** — decidir COM O USUÁRIO se vale a pena configurar
+error tracking opcional (Sentry BYO-DSN) agora ou deixar pra depois (é
+opcional no plano aprovado). Se a resposta for "depois", pular direto
+para a Fase 3 (testes). Fase 2.1 (logger estruturado) está concluída.
 
 ---
 
@@ -162,20 +162,39 @@ checklist detalhado na seção "Fase 2" abaixo. Fase 1 está 100% concluída.
       um dia precisar liberar (risco de vazamento de bearer key via
       script de terceiro).
 
-## Fase 2 — Observabilidade — ⬜ NÃO INICIADO
+## Fase 2 — Observabilidade — 🔄 EM ANDAMENTO
 
-### 2.1 — `src/lib/logger.ts`
-- [ ] Wrapper estruturado sobre `console.*`: `{ level, message, accountId?,
-      requestId?, operation, timestamp, ...extra }`
-- [ ] Migrar os pontos mais críticos primeiro: webhook do WhatsApp
-      (`src/app/api/whatsapp/webhook/route.ts`), rotas de cron
-      (`src/app/api/automations/cron/route.ts`,
-      `src/app/api/flows/cron/route.ts`), `toErrorResponse()`
-      (`src/lib/auth/account.ts`), `toApiErrorResponse()`
-      (`src/lib/api/v1/respond.ts`)
-- [ ] Não migrar os ~230 call-sites de uma vez — só os críticos acima
-      neste rollout; o resto migra organicamente quando cada arquivo for
-      tocado por outro trabalho
+### 2.1 — `src/lib/logger.ts` — ✅ FEITO
+- [x] `src/lib/logger.ts`: `logger.{debug,info,warn,error}(message, context?)`
+      — uma linha JSON por chamada (`{ level, message, timestamp,
+      ...context }`), sem dependência nova. `context.error` (uma
+      instância de `Error`) é expandido pra `{ name, message, stack }`
+      automaticamente — problema real que motivou isso: `Error` não
+      serializa `message`/`stack` sozinho via `JSON.stringify`. Testado
+      em `logger.test.ts` (5 casos).
+- [x] Migrados os pontos de maior alavancagem (não todos os ~230
+      call-sites — decisão de escopo explícita, ver nota abaixo):
+  - `toErrorResponse()` (`src/lib/auth/account.ts`) — 3 call sites,
+    incluindo o catch-all que praticamente toda rota de dashboard usa
+  - `toApiErrorResponse()` (`src/lib/api/v1/respond.ts`) — o catch-all
+    equivalente pra toda rota `/api/v1/*`
+  - `src/app/api/flows/cron/route.ts` e
+    `src/app/api/automations/cron/route.ts` — este último **não tinha
+    log nenhum** antes (a falha só ia pro corpo HTTP 500, que o pinger
+    externo provavelmente ignora); achado e corrigido pelo caminho
+  - `src/app/api/whatsapp/webhook/route.ts` — só os 2 catches MAIS
+    externos (falha não tratada no processamento inteiro), não os ~23
+    logs internos já tageados (`[webhook] ...`) espalhados pelas
+    funções auxiliares desse arquivo de ~1200 linhas
+- [x] Decisão de escopo (documentada em `docs/engineering-standards.md`):
+      migrar TODOS os ~230 call-sites de uma vez, principalmente dentro
+      de um arquivo grande e crítico como o webhook, seria um diff
+      grande e arriscado por pouco ganho adicional — os pontos migrados
+      já cobrem os "funis" por onde a maioria dos erros passa. O resto
+      migra organicamente quando cada arquivo for tocado por outro
+      trabalho.
+- [x] Gate completo: lint (0 erros), typecheck (0 erros), **775/775
+      testes** (79 arquivos), build OK.
 
 ### 2.2 — Error tracking opcional (BYO Sentry DSN) — decisão pendente
 - [ ] Perguntar ao usuário se isso é prioridade agora ou fica pra depois

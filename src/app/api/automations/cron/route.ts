@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { resumePendingExecution } from '@/lib/automations/engine'
 import type { AutomationContext } from '@/lib/automations/engine'
+import { logger } from '@/lib/logger'
 
 /**
  * Drain due `automation_pending_executions` rows. Meant to be hit
@@ -39,7 +40,14 @@ export async function GET(request: Request) {
     .order('run_at', { ascending: true })
     .limit(50)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    // Previously returned without logging at all — a failed scan here
+    // was invisible to anyone not manually inspecting the cron pinger's
+    // HTTP response. See docs/adr/0003-background-jobs-polling-not-queue.md's
+    // "reconsider if" note on this pattern's observability gap.
+    logger.error('Pending-execution scan failed', { operation: 'automations/cron', error })
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   if (!due || due.length === 0) return NextResponse.json({ processed: 0 })
 
   let processed = 0

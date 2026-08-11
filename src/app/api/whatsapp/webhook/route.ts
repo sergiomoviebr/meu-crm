@@ -14,6 +14,7 @@ import {
   handleTemplateWebhookChange,
   isTemplateWebhookField,
 } from '@/lib/whatsapp/template-webhook'
+import { logger } from '@/lib/logger'
 
 // The `after()` callback in POST runs within this route's max duration.
 // Inbound processing can fan out to per-media Meta verification calls, so
@@ -170,7 +171,7 @@ export async function GET(request: Request) {
       { status: 403 }
     )
   } catch (error) {
-    console.error('Error in webhook GET verification:', error)
+    logger.error('Webhook GET verification failed', { operation: 'whatsapp/webhook', error })
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -218,7 +219,17 @@ export async function POST(request: Request) {
     try {
       await processWebhook(body)
     } catch (error) {
-      console.error('Error processing webhook:', error)
+      // Top-level catch for the entire async POST-processing fan-out
+      // (after() callback) — anything that escapes here means an
+      // inbound WhatsApp event was silently dropped. Every failure
+      // inside the pipeline is logged closer to its source with a
+      // [webhook]-tagged console call (not yet migrated — see
+      // docs/engineering-standards.md → Observability); this is the
+      // last-resort net for anything those miss.
+      logger.error('Unhandled webhook processing failure', {
+        operation: 'whatsapp/webhook',
+        error,
+      })
     }
   })
 
