@@ -284,11 +284,14 @@
     "sidebar": {
       "contactInfo": "Informações do contato",
       "tags": "Tags",
-      "notes": "Notas",
+      "notes": "Notas do contato",
       "deals": "Negócios",
       "noTags": "Nenhuma tag",
       "noDeals": "Nenhum negócio",
-      "addNotePlaceholder": "Adicionar uma nota..."
+      "addNotePlaceholder": "Adicionar uma nota...",
+      "conversationNotes": "Notas desta conversa",
+      "addConversationNotePlaceholder": "Adicionar uma nota sobre esta conversa...",
+      "noConversationNotes": "Ainda não há notas nesta conversa."
     },
     "aiBanner": {
       "pausedTitle": "O assistente de IA está pausado aqui",

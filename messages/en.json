@@ -284,11 +284,14 @@
     "sidebar": {
       "contactInfo": "Contact info",
       "tags": "Tags",
-      "notes": "Notes",
+      "notes": "Contact notes",
       "deals": "Deals",
       "noTags": "No tags",
       "noDeals": "No deals",
-      "addNotePlaceholder": "Add a note..."
+      "addNotePlaceholder": "Add a note...",
+      "conversationNotes": "Notes on this conversation",
+      "addConversationNotePlaceholder": "Add a note about this conversation...",
+      "noConversationNotes": "No notes on this conversation yet."
     },
     "aiBanner": {
       "pausedTitle": "AI assistant is paused here",

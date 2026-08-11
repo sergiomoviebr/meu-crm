@@ -155,6 +155,14 @@ export interface ContactNote {
   created_at: string;
 }
 
+export interface ConversationNote {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  note_text: string;
+  created_at: string;
+}
+
 export type ConversationStatus = 'open' | 'pending' | 'closed';
 
 export interface Conversation {

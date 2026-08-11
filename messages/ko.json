@@ -284,11 +284,14 @@
     "sidebar": {
       "contactInfo": "연락처 정보",
       "tags": "태그",
-      "notes": "메모",
+      "notes": "연락처 메모",
       "deals": "딜",
       "noTags": "태그 없음",
       "noDeals": "딜 없음",
-      "addNotePlaceholder": "메모 추가..."
+      "addNotePlaceholder": "메모 추가...",
+      "conversationNotes": "이 대화의 메모",
+      "addConversationNotePlaceholder": "이 대화에 대한 메모 추가...",
+      "noConversationNotes": "이 대화에 메모가 아직 없습니다."
     },
     "aiBanner": {
       "pausedTitle": "이 대화에서 AI 어시스턴트가 일시 중지됨",

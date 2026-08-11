@@ -24,8 +24,8 @@ reais confirmadas, uma por categoria que o usuário escolheu.
 
 ## Próximo passo
 
-**Funcionalidade 2 — Notas internas por conversa.** Funcionalidade 1
-concluída.
+**Funcionalidade 3 — Enviar localização.** Funcionalidades 1 e 2
+concluídas.
 
 ## 1 — Fixar conversas (Organização) — ✅ FEITO
 
@@ -60,16 +60,40 @@ concluída.
 - [x] Gate completo: lint (0 erros), typecheck (0 erros), 792/792
       testes, build OK.
 
-## 2 — Notas internas por conversa (Produtividade) — ⬜ NÃO INICIADO
+## 2 — Notas internas por conversa (Produtividade) — ✅ FEITO
 
-- [ ] Migration `039_conversation_notes.sql`: cópia estrutural de
-      `contact_notes`, trocando `contact_id` por `conversation_id`.
-- [ ] Nova seção "Notas da conversa" em
-      `src/components/inbox/message-thread.tsx`, reaproveitando o
-      padrão de UI de `contact-sidebar.tsx`.
-- [ ] Chaves i18n (`Inbox.notes` ou similar) nos 3 idiomas.
-- [ ] Teste de isolamento RLS.
-- [ ] Gate completo verde.
+- [x] Migration `039_conversation_notes.sql`: cópia estrutural de
+      `contact_notes` (mesma RLS via `is_account_member`, min-role
+      'agent' pra escrever), trocando `contact_id` por
+      `conversation_id`, com checagem extra no INSERT de que a
+      conversa referenciada pertence mesmo à conta informada. Realtime
+      habilitado. Aplicada via `supabase migration up`.
+- [x] **Correção ao plano original**: em vez de colocar a seção nova
+      dentro de `message-thread.tsx`, ela foi pra `contact-sidebar.tsx`
+      — é o painel lateral que já existe especificamente pra
+      informação de apoio (tags, negócios, notas do contato); criar um
+      segundo lugar de "notas" dentro do thread principal duplicaria
+      UI. `ContactSidebar` ganhou um novo prop opcional
+      `conversationId`, passado por `src/app/(dashboard)/inbox/page.tsx`.
+      Nova seção "Notas desta conversa" logo abaixo do telefone/e-mail,
+      antes das tags — o contexto mais imediato pro atendente. A seção
+      de notas do contato (mais abaixo) foi rotulada "Notas do
+      contato" nos 3 idiomas pra não ficar ambíguo com a nova.
+- [x] Novo tipo `ConversationNote` em `src/types/index.ts`.
+- [x] Chaves i18n em `Inbox.sidebar` nos 3 idiomas.
+- [x] Corrigido durante o gate: `setConversationNotes([])` síncrono no
+      corpo do effect disparava a regra `react-hooks/set-state-in-effect`
+      como erro (não warning) — resolvido com o mesmo
+      `eslint-disable-next-line` já usado em `fetchContactData` no
+      mesmo arquivo, mesmo padrão.
+- [x] Verificação real (mesmo raciocínio da funcionalidade 1 — inbox
+      vazio neste ambiente): script Playwright descartável criou conta
+      + conversa via SQL, abriu o painel lateral, confirmou os dois
+      rótulos distintos ("Notas desta conversa" vs "Notas do
+      contato"), adicionou uma nota, confirmou que apareceu e que
+      sobrevive a reload. Passou nas 3 asserções, script apagado depois.
+- [x] Gate completo: lint (0 erros), typecheck (0 erros), 792/792
+      testes, build OK.
 
 ## 3 — Enviar localização (Mais tipos de mensagem) — ⬜ NÃO INICIADO
 

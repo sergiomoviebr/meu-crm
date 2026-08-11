@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import type { Contact, Deal, ContactNote, Tag } from "@/types";
+import type { Contact, ConversationNote, Deal, ContactNote, Tag } from "@/types";
 import {
   Phone,
   Mail,
@@ -24,9 +24,14 @@ import { getDateFnsLocale } from "@/lib/date-fns-locale";
 
 interface ContactSidebarProps {
   contact: Contact | null;
+  /** Active conversation, when the sidebar is opened from a specific
+   *  chat — drives the "Notes on this conversation" section below.
+   *  Optional so any other caller of ContactSidebar keeps working
+   *  without passing it. */
+  conversationId?: string | null;
 }
 
-export function ContactSidebar({ contact }: ContactSidebarProps) {
+export function ContactSidebar({ contact, conversationId = null }: ContactSidebarProps) {
   const tSidebar = useTranslations("Inbox.sidebar");
   const tThread = useTranslations("Inbox.messageThread");
   const dateFnsLocale = getDateFnsLocale(useLocale());
@@ -38,6 +43,9 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
   const [tags, setTags] = useState<(Tag & { contact_tag_id: string })[]>([]);
   const [newNote, setNewNote] = useState("");
   const [addingNote, setAddingNote] = useState(false);
+  const [conversationNotes, setConversationNotes] = useState<ConversationNote[]>([]);
+  const [newConversationNote, setNewConversationNote] = useState("");
+  const [addingConversationNote, setAddingConversationNote] = useState(false);
 
   const fetchContactData = useCallback(async () => {
     if (!contact) return;
@@ -81,6 +89,58 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchContactData();
   }, [fetchContactData]);
+
+  // Conversation notes load independently of contact notes — keyed on
+  // conversationId, not contact.id, since the same contact can have
+  // multiple conversations over time (each with its own notes).
+  useEffect(() => {
+    if (!conversationId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setConversationNotes([]);
+      return;
+    }
+    let cancelled = false;
+    const supabase = createClient();
+    (async () => {
+      const { data } = await supabase
+        .from("conversation_notes")
+        .select("*")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: false });
+      if (!cancelled && data) setConversationNotes(data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationId]);
+
+  const handleAddConversationNote = useCallback(async () => {
+    if (!conversationId || !newConversationNote.trim() || !accountId) return;
+    setAddingConversationNote(true);
+
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const user = session?.user;
+
+    const { data, error } = await supabase
+      .from("conversation_notes")
+      .insert({
+        conversation_id: conversationId,
+        account_id: accountId,
+        user_id: user?.id,
+        note_text: newConversationNote.trim(),
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setConversationNotes((prev) => [data, ...prev]);
+      setNewConversationNote("");
+    }
+    setAddingConversationNote(false);
+  }, [conversationId, newConversationNote, accountId]);
 
   const handleCopyPhone = useCallback(async () => {
     if (!contact?.phone) return;
@@ -182,6 +242,63 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
 
           {/* Divider */}
           <div className="my-4 border-t border-border" />
+
+          {/* Notes on THIS conversation — distinct from the contact
+              notes further down, which follow the person across every
+              conversation they've ever had. Only rendered when a
+              conversation is actually open (conversationId set). */}
+          {conversationId && (
+            <>
+              <div>
+                <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <StickyNote className="h-3 w-3" />
+                  {tSidebar("conversationNotes")}
+                </div>
+                <div className="mt-2">
+                  <div className="flex gap-2">
+                    <textarea
+                      value={newConversationNote}
+                      onChange={(e) => setNewConversationNote(e.target.value)}
+                      placeholder={tSidebar("addConversationNotePlaceholder")}
+                      rows={2}
+                      className="flex-1 resize-none rounded-lg border border-border bg-muted px-3 py-2 text-xs text-foreground placeholder-muted-foreground outline-none focus:border-primary/50"
+                    />
+                    <Button
+                      size="sm"
+                      className="h-auto bg-primary px-2 hover:bg-primary/90"
+                      onClick={handleAddConversationNote}
+                      disabled={!newConversationNote.trim() || addingConversationNote}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+
+                  <div className="mt-2 space-y-2">
+                    {conversationNotes.length === 0 ? (
+                      <p className="px-1 text-xs text-muted-foreground">
+                        {tSidebar("noConversationNotes")}
+                      </p>
+                    ) : (
+                      conversationNotes.map((note) => (
+                        <div key={note.id} className="rounded-lg bg-muted px-3 py-2">
+                          <p className="whitespace-pre-wrap text-xs text-muted-foreground">
+                            {note.note_text}
+                          </p>
+                          <p className="mt-1 text-[10px] text-muted-foreground">
+                            {format(new Date(note.created_at), "MMM d, yyyy HH:mm", {
+                              locale: dateFnsLocale,
+                            })}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="my-4 border-t border-border" />
+            </>
+          )}
 
           {/* Tags */}
           <div>
