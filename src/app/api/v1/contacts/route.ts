@@ -8,8 +8,10 @@
 // `created: false`; a new row returns 201 with `created: true`.
 // ============================================================
 
+import { z } from 'zod';
 import { requireApiKey } from '@/lib/auth/api-context';
 import { ok, okList, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
+import { parseJsonBody } from '@/lib/api/v1/validate';
 import {
   parseListParams,
   keysetFilter,
@@ -24,6 +26,18 @@ import {
   resolveAuditUserId,
   ContactError,
 } from '@/lib/api/v1/contacts';
+
+// Shape/presence only — E.164 validity is enforced downstream by
+// findOrCreateContact (src/lib/api/v1/contacts.ts), which already owns
+// that domain rule; duplicating it here would just be two places to
+// keep in sync.
+const CreateContactSchema = z.object({
+  phone: z.string().trim().min(1, "'phone' is required"),
+  name: z.string().optional(),
+  email: z.string().optional(),
+  company: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+});
 
 // PostgREST filter values are comma/paren-delimited; strip anything
 // that could break the `.or()` grammar before interpolating a search
@@ -96,19 +110,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const ctx = await requireApiKey(request, 'contacts:write');
-
-    const body = (await request.json().catch(() => null)) as Record<
-      string,
-      unknown
-    > | null;
-    if (!body || typeof body !== 'object') {
-      return fail('bad_request', 'Request body must be a JSON object', 400);
-    }
-
-    const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
-    if (!phone) {
-      return fail('bad_request', "'phone' is required", 400);
-    }
+    const body = await parseJsonBody(request, CreateContactSchema);
 
     const auditUserId = await resolveAuditUserId(ctx.supabase, ctx.accountId);
 
@@ -117,21 +119,15 @@ export async function POST(request: Request) {
       ctx.accountId,
       auditUserId,
       {
-        phone,
-        name: typeof body.name === 'string' ? body.name : undefined,
-        email: typeof body.email === 'string' ? body.email : undefined,
-        company: typeof body.company === 'string' ? body.company : undefined,
+        phone: body.phone.trim(),
+        name: body.name,
+        email: body.email,
+        company: body.company,
       }
     );
 
-    if (Array.isArray(body.tags)) {
-      await setContactTags(
-        ctx.supabase,
-        ctx.accountId,
-        auditUserId,
-        id,
-        body.tags.filter((t): t is string => typeof t === 'string')
-      );
+    if (body.tags) {
+      await setContactTags(ctx.supabase, ctx.accountId, auditUserId, id, body.tags);
     }
 
     const contact = await getContactById(ctx.supabase, ctx.accountId, id);

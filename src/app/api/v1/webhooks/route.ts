@@ -7,8 +7,10 @@
 // an encrypted copy and can never show it again.
 // ============================================================
 
+import { z } from 'zod';
 import { requireApiKey } from '@/lib/auth/api-context';
 import { ok, okList, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
+import { parseJsonBody } from '@/lib/api/v1/validate';
 import { encrypt } from '@/lib/whatsapp/encryption';
 import { normalizeEvents } from '@/lib/webhooks/events';
 import {
@@ -17,6 +19,14 @@ import {
   generateWebhookSecret,
   normalizeWebhookUrl,
 } from '@/lib/webhooks/endpoints';
+
+// Shape/presence only — URL scheme/host validity and known-event-name
+// checking are domain rules already owned by normalizeWebhookUrl /
+// normalizeEvents (src/lib/webhooks/*), reused unchanged below.
+const CreateWebhookSchema = z.object({
+  url: z.string().optional(),
+  events: z.array(z.string()).optional(),
+});
 
 export async function GET(request: Request) {
   try {
@@ -49,14 +59,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const ctx = await requireApiKey(request, 'webhooks:manage');
-
-    const body = (await request.json().catch(() => null)) as Record<
-      string,
-      unknown
-    > | null;
-    if (!body || typeof body !== 'object') {
-      return fail('bad_request', 'Request body must be a JSON object', 400);
-    }
+    const body = await parseJsonBody(request, CreateWebhookSchema);
 
     const url = normalizeWebhookUrl(body.url);
     if (!url) {

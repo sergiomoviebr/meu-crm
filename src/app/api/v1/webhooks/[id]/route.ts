@@ -7,14 +7,25 @@
 // secret is never returned here — it's shown once at creation only.
 // ============================================================
 
+import { z } from 'zod';
 import { requireApiKey } from '@/lib/auth/api-context';
 import { ok, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
+import { parseJsonBody } from '@/lib/api/v1/validate';
 import { normalizeEvents } from '@/lib/webhooks/events';
 import {
   WEBHOOK_PUBLIC_COLUMNS,
   serializeWebhookEndpoint,
   normalizeWebhookUrl,
 } from '@/lib/webhooks/endpoints';
+
+// Shape/presence only, all optional (partial update) — url/events
+// domain validity stays in normalizeWebhookUrl / normalizeEvents, reused
+// unchanged below.
+const UpdateWebhookSchema = z.object({
+  url: z.string().optional(),
+  events: z.array(z.string()).optional(),
+  is_active: z.boolean().optional(),
+});
 
 export async function GET(
   request: Request,
@@ -50,14 +61,7 @@ export async function PATCH(
   try {
     const ctx = await requireApiKey(request, 'webhooks:manage');
     const { id } = await params;
-
-    const body = (await request.json().catch(() => null)) as Record<
-      string,
-      unknown
-    > | null;
-    if (!body || typeof body !== 'object') {
-      return fail('bad_request', 'Request body must be a JSON object', 400);
-    }
+    const body = await parseJsonBody(request, UpdateWebhookSchema);
 
     const updates: Record<string, unknown> = {};
 

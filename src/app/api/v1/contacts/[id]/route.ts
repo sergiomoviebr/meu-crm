@@ -8,14 +8,27 @@
 // array of tag names) to replace the contact's tags.
 // ============================================================
 
+import { z } from 'zod';
 import { requireApiKey } from '@/lib/auth/api-context';
 import { ok, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
+import { parseJsonBody } from '@/lib/api/v1/validate';
 import {
   getContactById,
   setContactTags,
   resolveAuditUserId,
   ContactError,
 } from '@/lib/api/v1/contacts';
+
+// Every field optional (partial update) but nullable — `null` clears
+// the field, a string sets it, an absent key leaves it untouched. Same
+// three-way semantics the original hand-rolled `field in body` check
+// enforced.
+const UpdateContactSchema = z.object({
+  name: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  company: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+});
 
 export async function GET(
   request: Request,
@@ -39,32 +52,20 @@ export async function PATCH(
   try {
     const ctx = await requireApiKey(request, 'contacts:write');
     const { id } = await params;
-
-    const body = (await request.json().catch(() => null)) as Record<
-      string,
-      unknown
-    > | null;
-    if (!body || typeof body !== 'object') {
-      return fail('bad_request', 'Request body must be a JSON object', 400);
-    }
+    const body = await parseJsonBody(request, UpdateContactSchema);
 
     // Verify the contact is in this account before mutating anything.
     const existing = await getContactById(ctx.supabase, ctx.accountId, id);
     if (!existing) return fail('not_found', 'Contact not found', 404);
 
-    // Build a partial update from the provided scalar fields. A field
-    // is updated only when its key is PRESENT (so omitted fields are
-    // untouched); `null` clears it, a string sets it, and any other
-    // type is a 400 rather than a silently-ignored no-op.
+    // Build a partial update from the provided scalar fields. A field is
+    // updated only when its key is PRESENT (so omitted fields are
+    // untouched) — zod parses the body without inventing absent keys, so
+    // `field in body` still means exactly "the caller sent this field",
+    // same as the original hand-rolled check.
     const updates: Record<string, unknown> = {};
     for (const field of ['name', 'email', 'company'] as const) {
-      if (!(field in body)) continue;
-      const value = body[field];
-      if (value === null || typeof value === 'string') {
-        updates[field] = value;
-      } else {
-        return fail('bad_request', `'${field}' must be a string or null`, 400);
-      }
+      if (field in body) updates[field] = body[field];
     }
 
     if (Object.keys(updates).length > 0) {
@@ -80,15 +81,9 @@ export async function PATCH(
       }
     }
 
-    if (Array.isArray(body.tags)) {
+    if (body.tags) {
       const auditUserId = await resolveAuditUserId(ctx.supabase, ctx.accountId);
-      await setContactTags(
-        ctx.supabase,
-        ctx.accountId,
-        auditUserId,
-        id,
-        body.tags.filter((t): t is string => typeof t === 'string')
-      );
+      await setContactTags(ctx.supabase, ctx.accountId, auditUserId, id, body.tags);
     }
 
     const contact = await getContactById(ctx.supabase, ctx.accountId, id);

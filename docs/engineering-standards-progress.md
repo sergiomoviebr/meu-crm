@@ -29,10 +29,12 @@ antes de ser marcado como concluído.
 
 ## Próximo passo
 
-**Fase 1, Passo 1.3** — adicionar `zod` e migrar a validação de
-`src/app/api/v1/contacts/route.ts` (POST) e `contacts/[id]/route.ts`
-(PATCH) para schemas declarativos. Ver checklist detalhado na seção
-"Fase 1" abaixo.
+**Fase 1, Passo 1.4** — decidir COM O USUÁRIO o critério de enforcement
+do CSP (não é um passo de execução autônoma — precisa de uma decisão de
+produto/ops que só o usuário pode tomar). Se a sessão for retomada sem
+essa decisão ainda tomada, perguntar antes de continuar. Alternativa: se
+o usuário preferir, pular para a Fase 2 (observabilidade) e voltar ao
+CSP/CORS depois — nenhuma das duas depende da outra.
 
 ---
 
@@ -107,21 +109,35 @@ antes de ser marcado como concluído.
 - [x] Suíte completa confirmada verde: lint (0 erros), typecheck (0
       erros), 757/757 testes (76 arquivos), build de produção OK.
 
-### 1.3 — Validação de entrada com zod — ⬜ NÃO INICIADO
-- [ ] `npm install zod`
-- [ ] Migrar `src/app/api/v1/contacts/route.ts` (POST) e
-      `src/app/api/v1/contacts/[id]/route.ts` (PATCH) para schemas zod —
-      são as rotas mais expostas e já têm o sanitizador manual
-      (`sanitizeSearch`) que motivou este item
-- [ ] Migrar as demais rotas `/api/v1/*` que recebem `request.json()`:
-      `messages/route.ts`, `broadcasts/route.ts`, `webhooks/route.ts`,
-      `webhooks/[id]/route.ts`
-- [ ] Documentar o padrão escolhido (schema por rota, onde declarar, como
-      testar) em `docs/engineering-standards.md` → seção Security, para
-      quem for migrar as rotas de dashboard depois (não faz parte deste
-      rollout — só as rotas públicas `/api/v1` são migradas agora)
-- [ ] Testes: para cada schema novo, pelo menos um teste de rejeição
-      (payload malformado → 400 com mensagem clara)
+### 1.3 — Validação de entrada com zod — ✅ FEITO
+- [x] `npm install zod`
+- [x] `src/lib/api/v1/validate.ts`: helper `parseJsonBody(request, schema)`
+      compartilhado — parseia JSON, valida contra o schema zod, lança
+      `ApiError('bad_request', …)` no formato que toda rota v1 já mapeia
+      via `toApiErrorResponse`. Testado em `validate.test.ts` (7 casos).
+- [x] Migradas todas as 6 rotas de escrita `/api/v1/*`:
+      `contacts/route.ts` (POST), `contacts/[id]/route.ts` (PATCH),
+      `messages/route.ts` (POST), `broadcasts/route.ts` (POST),
+      `webhooks/route.ts` (POST), `webhooks/[id]/route.ts` (PATCH).
+- [x] Decisão de escopo aplicada em todas: os schemas zod validam só
+      **forma/presença** (string vs array vs boolean, obrigatório vs
+      opcional) — regras de negócio que já existiam em módulos de
+      domínio (E.164 em `findOrCreateContact`, cap de 1..1000
+      destinatários + `template_name` em `createBroadcast`, nomes de
+      evento válidos em `normalizeEvents`, URL válida em
+      `normalizeWebhookUrl`) permanecem exatamente onde estavam — zod
+      não duplica essas regras.
+- [x] `docs/engineering-standards.md` → seção Security atualizada
+      (não é mais "a fazer", descreve o padrão real).
+- [x] Testes de rejeição: `src/app/api/v1/validation.test.ts` (6 casos,
+      um por rota, cada um confirma 400 antes de tocar o banco).
+- [x] Gate completo rodado de novo ao final: lint (0 erros), typecheck
+      (0 erros), **770/770 testes** (78 arquivos), build OK.
+- [ ] **Não migrado (fora do escopo deste passo, ver nota no doc de
+      padrões)**: rotas de dashboard (`/api/*`, sessão por cookie) —
+      ficam com a validação manual atual; migrar é um passo separado,
+      de prioridade menor, só quando cada rota for tocada por outro
+      trabalho.
 
 ### 1.4 — Critério de enforcement do CSP — ⬜ NÃO INICIADO
 - [ ] Decidir com o usuário: qual critério objetivo aciona a troca de

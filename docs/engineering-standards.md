@@ -123,15 +123,21 @@ serving one CRM). The existing shape is a pragmatic hybrid, keep it:
   — not yet blocking anything. See [ADR 0004](./adr/0004-csp-enforcement-criteria.md)
   (once written — Phase 1 item) for the exact criteria to flip it to
   enforcing.
-- **Input validation**: there is no schema-validation library
-  (`package.json` has no zod/yup) — validation is hand-rolled per route
-  (e.g. `validateSendMessageParams` in `src/lib/whatsapp/send-message.ts`,
-  manual `typeof` checks in `src/app/api/v1/contacts/route.ts`, which also
-  has a hand-written regex sanitizer against PostgREST filter injection).
-  New public-facing routes (`/api/v1/*` especially) should use `zod` once
-  it's added (Phase 1 backlog item) rather than hand-rolling another ad hoc
-  validator — see the engineering-standards backlog in this repo's plan
-  history for the rollout order.
+- **Input validation**: every `/api/v1/*` write route (`contacts`,
+  `contacts/[id]`, `messages`, `broadcasts`, `webhooks`,
+  `webhooks/[id]`) parses its JSON body through `zod` via
+  `parseJsonBody()` (`src/lib/api/v1/validate.ts`) instead of hand-rolled
+  `typeof`/`Array.isArray` narrowing. The schemas are intentionally
+  shape-only — E.164 phone validity, the 1..1000 broadcast recipient
+  cap, known WhatsApp event names, and URL scheme checks stay in the
+  domain modules that already owned them
+  (`src/lib/whatsapp/send-message.ts`, `broadcast-core.ts`,
+  `src/lib/webhooks/*`, `src/lib/api/v1/contacts.ts`) — `zod` isn't a
+  second place to maintain those rules. New `/api/v1/*` write routes
+  should follow the same split: a small `z.object({...})` for shape,
+  delegate domain rules to existing validators. Dashboard routes
+  (`/api/*`) haven't been migrated — that's a separate, lower-priority
+  pass (see `docs/engineering-standards-progress.md`).
 - **Rate limiting**: `src/lib/rate-limit.ts` is a real, tested, in-memory
   fixed-window limiter with per-purpose budgets in `RATE_LIMITS`. It is
   explicitly single-process (documented at the top of the file) — fine for

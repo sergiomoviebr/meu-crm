@@ -35,7 +35,9 @@ import { requireApiKey } from '@/lib/auth/api-context';
 // still exceed 60s, so very large sends should be split across
 // requests. A durable queue/cron drain is the complete fix (follow-up).
 export const maxDuration = 60;
+import { z } from 'zod';
 import { ok, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
+import { parseJsonBody } from '@/lib/api/v1/validate';
 import { resolveAuditUserId, ContactError } from '@/lib/api/v1/contacts';
 import {
   createBroadcast,
@@ -43,34 +45,41 @@ import {
   BroadcastError,
 } from '@/lib/whatsapp/broadcast-core';
 
+// Shape/presence only — the 1..1000 recipient cap, template_name
+// requirement, and E.164 validity are already enforced by
+// createBroadcast (src/lib/whatsapp/broadcast-core.ts), which throws a
+// BroadcastError this route already maps to the envelope below. This
+// schema exists to replace the old `typeof`/`Array.isArray` narrowing,
+// not to re-implement those checks a second time.
+const CreateBroadcastSchema = z.object({
+  name: z.string().optional(),
+  template_name: z.string().optional().default(''),
+  template_language: z.string().optional(),
+  recipients: z
+    .array(
+      z.object({
+        to: z.string().optional().default(''),
+        params: z.array(z.string()).optional(),
+      })
+    )
+    .optional()
+    .default([]),
+});
+
 export async function POST(request: Request) {
   try {
     const ctx = await requireApiKey(request, 'broadcasts:send');
-
-    const body = (await request.json().catch(() => null)) as Record<
-      string,
-      unknown
-    > | null;
-    if (!body || typeof body !== 'object') {
-      return fail('bad_request', 'Request body must be a JSON object', 400);
-    }
-
-    const templateName =
-      typeof body.template_name === 'string' ? body.template_name : '';
-    const recipients = Array.isArray(body.recipients) ? body.recipients : [];
+    const body = await parseJsonBody(request, CreateBroadcastSchema);
 
     const auditUserId = await resolveAuditUserId(ctx.supabase, ctx.accountId);
 
     const plan = await createBroadcast(ctx.supabase, ctx.accountId, auditUserId, {
-      name: typeof body.name === 'string' ? body.name : null,
-      templateName,
-      templateLanguage:
-        typeof body.template_language === 'string'
-          ? body.template_language
-          : null,
-      recipients: recipients.map((r) => ({
-        to: typeof r?.to === 'string' ? r.to : '',
-        params: Array.isArray(r?.params) ? r.params : undefined,
+      name: body.name ?? null,
+      templateName: body.template_name,
+      templateLanguage: body.template_language ?? null,
+      recipients: body.recipients.map((r) => ({
+        to: r.to,
+        params: r.params,
       })),
     });
 

@@ -31,8 +31,10 @@
 //               "contact_id", "contact_created" } }
 // ============================================================
 
+import { z } from 'zod';
 import { requireApiKey } from '@/lib/auth/api-context';
 import { ok, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
+import { parseJsonBody } from '@/lib/api/v1/validate';
 import { resolveConversationByPhone } from '@/lib/whatsapp/resolve-conversation';
 import {
   sendMessageToConversation,
@@ -41,57 +43,61 @@ import {
 } from '@/lib/whatsapp/send-message';
 import type { InteractiveMessagePayload } from '@/lib/whatsapp/interactive';
 
+// Shape/presence only — message-type-specific rules (e.g. a template
+// needs `template.name`, an image needs `media_url`) stay in
+// `validateSendMessageParams` (src/lib/whatsapp/send-message.ts), which
+// already owns that domain logic and is shared with the dashboard's own
+// send route.
+const SendMessageSchema = z.object({
+  to: z.string().trim().min(1, "'to' is required"),
+  type: z.string().optional().default('text'),
+  text: z.string().optional(),
+  media_url: z.string().optional(),
+  filename: z.string().optional(),
+  template: z
+    .object({
+      name: z.string().optional(),
+      language: z.string().optional(),
+      params: z
+        .union([z.array(z.string()), z.record(z.string(), z.unknown())])
+        .optional(),
+    })
+    .optional(),
+  reply_to_message_id: z.string().optional(),
+  name: z.string().optional(),
+  interactive_payload: z.record(z.string(), z.unknown()).optional(),
+});
+
 export async function POST(request: Request) {
   try {
     const ctx = await requireApiKey(request, 'messages:send');
+    const body = await parseJsonBody(request, SendMessageSchema);
 
-    const body = (await request.json().catch(() => null)) as Record<
-      string,
-      unknown
-    > | null;
-    if (!body || typeof body !== 'object') {
-      return fail('bad_request', 'Request body must be a JSON object', 400);
-    }
+    const to = body.to.trim();
+    const type = body.type;
+    const template = body.template ?? null;
 
-    const to = typeof body.to === 'string' ? body.to.trim() : '';
-    if (!to) {
-      return fail('bad_request', "'to' is required", 400);
-    }
-
-    const type = typeof body.type === 'string' ? body.type : 'text';
-
-    // Unpack the optional `template` object into the flat params the
-    // send core expects. `params` as an array → legacy positional body
-    // params; as an object → structured header/body/button params.
-    const template =
-      body.template && typeof body.template === 'object'
-        ? (body.template as Record<string, unknown>)
-        : null;
+    // `params` as an array → legacy positional body params; as an
+    // object → structured header/body/button params.
     const templateParams = Array.isArray(template?.params)
-      ? (template.params as unknown[]).filter(
-          (p): p is string => typeof p === 'string'
-        )
+      ? template.params
       : undefined;
     const templateMessageParams =
       template?.params && !Array.isArray(template.params)
         ? template.params
         : undefined;
 
+    const interactivePayload =
+      (body.interactive_payload as InteractiveMessagePayload | undefined) ?? null;
+
     // Validate the message shape BEFORE resolveConversationByPhone
     // finds-or-creates a contact + conversation, so a bad payload 400s
     // without leaving an orphan contact/conversation behind.
-    // Validated by `validateSendMessageParams` below; the cast just bridges
-    // the untyped JSON body to the send-core param type.
-    const interactivePayload =
-      body.interactive_payload && typeof body.interactive_payload === 'object'
-        ? (body.interactive_payload as InteractiveMessagePayload)
-        : null;
-
     validateSendMessageParams({
       messageType: type,
-      contentText: typeof body.text === 'string' ? body.text : null,
-      mediaUrl: typeof body.media_url === 'string' ? body.media_url : null,
-      templateName: typeof template?.name === 'string' ? template.name : null,
+      contentText: body.text ?? null,
+      mediaUrl: body.media_url ?? null,
+      templateName: template?.name ?? null,
       interactivePayload,
     });
 
@@ -102,7 +108,7 @@ export async function POST(request: Request) {
       ctx.supabase,
       ctx.accountId,
       to,
-      typeof body.name === 'string' ? body.name : null
+      body.name ?? null
     );
 
     const result = await sendMessageToConversation(
@@ -111,19 +117,15 @@ export async function POST(request: Request) {
       {
         conversationId: resolved.conversationId,
         messageType: type,
-        contentText: typeof body.text === 'string' ? body.text : null,
-        mediaUrl: typeof body.media_url === 'string' ? body.media_url : null,
-        filename: typeof body.filename === 'string' ? body.filename : null,
-        templateName: typeof template?.name === 'string' ? template.name : null,
-        templateLanguage:
-          typeof template?.language === 'string' ? template.language : null,
+        contentText: body.text ?? null,
+        mediaUrl: body.media_url ?? null,
+        filename: body.filename ?? null,
+        templateName: template?.name ?? null,
+        templateLanguage: template?.language ?? null,
         templateParams,
         templateMessageParams,
         interactivePayload,
-        replyToMessageId:
-          typeof body.reply_to_message_id === 'string'
-            ? body.reply_to_message_id
-            : null,
+        replyToMessageId: body.reply_to_message_id ?? null,
       }
     );
 
