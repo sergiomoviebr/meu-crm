@@ -68,7 +68,7 @@ function SignupPageInner() {
       ? `${window.location.origin}/join/${encodeURIComponent(inviteToken)}`
       : undefined;
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -82,6 +82,20 @@ function SignupPageInner() {
     if (error) {
       setError(error.message);
       setLoading(false);
+      return;
+    }
+
+    // When email confirmations are disabled (e.g. local dev — see
+    // supabase/config.toml's `auth.email.enable_confirmations`),
+    // signUp already returns an active session instead of requiring a
+    // confirmation click. Skip the "check your email" screen and go
+    // straight in — full-page nav so the just-written auth cookies
+    // reach the /dashboard middleware (same reasoning as /login).
+    if (data.session) {
+      const destination = inviteToken
+        ? `/join/${encodeURIComponent(inviteToken)}`
+        : "/dashboard";
+      window.location.href = destination;
       return;
     }
 
