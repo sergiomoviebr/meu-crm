@@ -259,6 +259,60 @@ export async function sendTextMessage(
   return { messageId: data.messages[0].id }
 }
 
+export interface SendLocationMessageArgs {
+  phoneNumberId: string
+  accessToken: string
+  to: string
+  latitude: number
+  longitude: number
+  /** Venue/place name, e.g. "wacrm HQ". Optional. */
+  name?: string
+  /** Street address. Optional. */
+  address?: string
+  contextMessageId?: string
+}
+
+/**
+ * Send a pinned location. Mirrors `sendTextMessage` — single fetch, same
+ * error handling — just a different `type`/body shape. Not a `MediaKind`:
+ * location isn't a link Meta fetches, it's inline lat/lng in the payload.
+ */
+export async function sendLocationMessage(
+  args: SendLocationMessageArgs
+): Promise<MetaSendResult> {
+  const { phoneNumberId, accessToken, to, latitude, longitude, name, address, contextMessageId } =
+    args
+  const url = `${META_API_BASE}/${phoneNumberId}/messages`
+  const body: Record<string, unknown> = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to,
+    type: 'location',
+    location: {
+      latitude,
+      longitude,
+      ...(name ? { name } : {}),
+      ...(address ? { address } : {}),
+    },
+  }
+  if (contextMessageId) {
+    body.context = { message_id: contextMessageId }
+  }
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(body),
+  })
+  if (!response.ok) {
+    await throwMetaError(response, `Meta API error: ${response.status}`)
+  }
+  const data = await response.json()
+  return { messageId: data.messages[0].id }
+}
+
 export type MediaKind = 'image' | 'video' | 'document' | 'audio'
 
 export interface SendMediaMessageArgs {

@@ -27,6 +27,7 @@ import {
   sendMediaMessage,
   sendInteractiveButtons,
   sendInteractiveList,
+  sendLocationMessage,
   type MediaKind,
 } from '@/lib/whatsapp/meta-api';
 import {
@@ -50,6 +51,7 @@ export const VALID_MESSAGE_TYPES = [
   'text',
   'template',
   'interactive',
+  'location',
   ...MEDIA_KINDS,
 ] as const;
 
@@ -83,6 +85,13 @@ export interface SendMessageParams {
   templateMessageParams?: unknown;
   /** Structured payload for `messageType === 'interactive'`. */
   interactivePayload?: InteractiveMessagePayload | null;
+  /** Required for `messageType === 'location'`. */
+  location?: {
+    latitude: number;
+    longitude: number;
+    name?: string | null;
+    address?: string | null;
+  } | null;
   replyToMessageId?: string | null;
 }
 
@@ -114,9 +123,16 @@ export function validateSendMessageParams(params: {
   mediaUrl?: string | null;
   templateName?: string | null;
   interactivePayload?: InteractiveMessagePayload | null;
+  location?: { latitude: number; longitude: number } | null;
 }): void {
-  const { messageType, contentText, mediaUrl, templateName, interactivePayload } =
-    params;
+  const {
+    messageType,
+    contentText,
+    mediaUrl,
+    templateName,
+    interactivePayload,
+    location,
+  } = params;
 
   if (!messageType) {
     throw new SendMessageError('bad_request', 'message_type is required', 400);
@@ -154,6 +170,41 @@ export function validateSendMessageParams(params: {
     const result = validateInteractivePayload(interactivePayload);
     if (!result.ok) {
       throw new SendMessageError('bad_request', result.error, 400);
+    }
+  }
+
+  if (messageType === 'location') {
+    if (!location) {
+      throw new SendMessageError(
+        'bad_request',
+        'location is required for location messages',
+        400
+      );
+    }
+    const { latitude, longitude } = location;
+    if (
+      typeof latitude !== 'number' ||
+      Number.isNaN(latitude) ||
+      latitude < -90 ||
+      latitude > 90
+    ) {
+      throw new SendMessageError(
+        'bad_request',
+        'location.latitude must be a number between -90 and 90',
+        400
+      );
+    }
+    if (
+      typeof longitude !== 'number' ||
+      Number.isNaN(longitude) ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      throw new SendMessageError(
+        'bad_request',
+        'location.longitude must be a number between -180 and 180',
+        400
+      );
     }
   }
 
@@ -196,6 +247,7 @@ export async function sendMessageToConversation(
     templateParams,
     templateMessageParams,
     interactivePayload,
+    location,
     replyToMessageId,
   } = params;
 
@@ -213,6 +265,7 @@ export async function sendMessageToConversation(
     mediaUrl,
     templateName,
     interactivePayload,
+    location,
   });
 
   const isMediaKind = (MEDIA_KINDS as readonly string[]).includes(messageType);
@@ -357,6 +410,20 @@ export async function sendMessageToConversation(
       });
       return result.messageId;
     }
+    if (messageType === 'location') {
+      const loc = location!;
+      const result = await sendLocationMessage({
+        phoneNumberId: config.phone_number_id,
+        accessToken,
+        to: phone,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        name: loc.name || undefined,
+        address: loc.address || undefined,
+        contextMessageId,
+      });
+      return result.messageId;
+    }
     if (messageType === 'interactive') {
       const p = interactivePayload!;
       if (p.kind === 'buttons') {
@@ -447,6 +514,16 @@ export async function sendMessageToConversation(
   // payload so the thread can re-render the buttons / rows.
   const interactiveBody =
     messageType === 'interactive' ? interactivePayload!.body : null;
+  // Same flattening the inbound webhook uses (route.ts's location case)
+  // so a location bubble reads identically whether it was sent or
+  // received — content_text is the only place location data lives,
+  // there's no dedicated lat/lng column.
+  const locationText =
+    messageType === 'location' && location
+      ? [location.name, location.address, `${location.latitude},${location.longitude}`]
+          .filter(Boolean)
+          .join(' - ')
+      : null;
 
   const { data: messageRecord, error: msgError } = await db
     .from('messages')
@@ -454,7 +531,7 @@ export async function sendMessageToConversation(
       conversation_id: conversationId,
       sender_type: 'agent',
       content_type: messageType,
-      content_text: interactiveBody ?? contentText ?? null,
+      content_text: interactiveBody ?? locationText ?? contentText ?? null,
       media_url: mediaUrl || null,
       template_name: templateName || null,
       interactive_payload:
@@ -478,7 +555,7 @@ export async function sendMessageToConversation(
   const lastMessageText =
     messageType === 'interactive'
       ? interactivePayloadPreviewText(interactivePayload!)
-      : contentText || `[${messageType}]`;
+      : locationText ?? contentText ?? `[${messageType}]`;
 
   await db
     .from('conversations')

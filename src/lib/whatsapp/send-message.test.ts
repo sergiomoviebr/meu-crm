@@ -130,6 +130,53 @@ describe('sendMessageToConversation — param validation (pre-DB)', () => {
     );
   });
 
+  it('requires a location object for location messages', async () => {
+    await expectSendError(
+      { ...base, messageType: 'location' },
+      400,
+      /location is required/
+    );
+  });
+
+  it('rejects an out-of-range or non-numeric latitude', async () => {
+    for (const latitude of [91, -91, NaN]) {
+      await expectSendError(
+        { ...base, messageType: 'location', location: { latitude, longitude: 0 } },
+        400,
+        /latitude/
+      );
+    }
+  });
+
+  it('rejects an out-of-range or non-numeric longitude', async () => {
+    for (const longitude of [181, -181, NaN]) {
+      await expectSendError(
+        { ...base, messageType: 'location', location: { latitude: 0, longitude } },
+        400,
+        /longitude/
+      );
+    }
+  });
+
+  it('accepts boundary lat/lng values (±90 / ±180) and reaches the DB', async () => {
+    const spy = vi.fn(() => {
+      throw new Error('reached DB');
+    });
+    const db = { from: spy } as unknown as SupabaseClient;
+    for (const [latitude, longitude] of [
+      [90, 180],
+      [-90, -180],
+    ]) {
+      await expect(
+        sendMessageToConversation(db, 'acct-1', {
+          ...base,
+          messageType: 'location',
+          location: { latitude, longitude },
+        })
+      ).rejects.toThrow('reached DB');
+    }
+  });
+
   it('allows a long "caption" on audio (audio carries none) — so it reaches the DB', async () => {
     // Audio is exempt from the caption cap, so validation passes and we
     // proceed to the conversation lookup — proven by the stub throwing.

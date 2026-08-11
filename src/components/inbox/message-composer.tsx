@@ -22,7 +22,10 @@ import {
   Plus,
   MessageSquareDashed,
   Zap,
+  MapPin,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { GatedButton } from "@/components/ui/gated-button";
 import {
@@ -115,6 +118,12 @@ interface MessageComposerProps {
   onSend: (text: string, replyToId?: string) => void;
   onSendMedia: (payload: SendMediaPayload) => void;
   onSendInteractive: (payload: InteractiveMessagePayload, replyToId?: string) => void;
+  onSendLocation: (loc: {
+    latitude: number;
+    longitude: number;
+    name?: string;
+    address?: string;
+  }) => void;
   onOpenTemplates: () => void;
   replyTo?: ReplyDraft | null;
   onClearReply?: () => void;
@@ -137,6 +146,7 @@ export function MessageComposer({
   onSend,
   onSendMedia,
   onSendInteractive,
+  onSendLocation,
   onOpenTemplates,
   replyTo,
   onClearReply,
@@ -154,6 +164,16 @@ export function MessageComposer({
     useState<InteractiveMessagePayload>(blankButtonsPayload);
   const [savingQuickReply, setSavingQuickReply] = useState(false);
   const [quickReplyOpen, setQuickReplyOpen] = useState(false);
+
+  // Send-location dialog. Latitude/longitude are kept as strings (raw
+  // input value) so the field can hold "-2" while the user is still
+  // typing "-23.5" — coercing to number happens only at submit time.
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [locationLat, setLocationLat] = useState("");
+  const [locationLng, setLocationLng] = useState("");
+  const [locationName, setLocationName] = useState("");
+  const [locationAddress, setLocationAddress] = useState("");
+  const [locating, setLocating] = useState(false);
 
   // Media attachment state. `draft` holds an uploaded-but-not-yet-sent
   // attachment; `busy` covers the upload/transcode window.
@@ -318,6 +338,62 @@ export function MessageComposer({
     setInteractiveOpen(false);
     onClearReply?.();
   }, [interactivePayload, onSendInteractive, replyTo?.id, onClearReply]);
+
+  const openLocationDialog = useCallback(() => {
+    setLocationLat("");
+    setLocationLng("");
+    setLocationName("");
+    setLocationAddress("");
+    setLocationOpen(true);
+  }, []);
+
+  // Browser geolocation — fills the lat/lng fields but doesn't send
+  // immediately, so the agent can still add a name/address or double-
+  // check the pin before it goes out.
+  const handleUseMyLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error(t("locationUnsupported"));
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocationLat(String(pos.coords.latitude));
+        setLocationLng(String(pos.coords.longitude));
+        setLocating(false);
+      },
+      () => {
+        toast.error(t("locationDenied"));
+        setLocating(false);
+      },
+      { timeout: 10_000 }
+    );
+  }, [t]);
+
+  const sendLocation = useCallback(() => {
+    const lat = Number(locationLat);
+    const lng = Number(locationLng);
+    if (
+      !locationLat.trim() ||
+      !locationLng.trim() ||
+      Number.isNaN(lat) ||
+      Number.isNaN(lng) ||
+      lat < -90 ||
+      lat > 90 ||
+      lng < -180 ||
+      lng > 180
+    ) {
+      toast.error(t("locationInvalid"));
+      return;
+    }
+    onSendLocation({
+      latitude: lat,
+      longitude: lng,
+      name: locationName.trim() || undefined,
+      address: locationAddress.trim() || undefined,
+    });
+    setLocationOpen(false);
+  }, [locationLat, locationLng, locationName, locationAddress, onSendLocation, t]);
 
   // Persist the current builder payload as a reusable interactive snippet.
   const saveAsQuickReply = useCallback(async () => {
@@ -666,6 +742,10 @@ export function MessageComposer({
                 <Mic className="mr-2 h-4 w-4" />
                 {t("voiceNote")}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={openLocationDialog}>
+                <MapPin className="mr-2 h-4 w-4" />
+                {t("sendLocation")}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -811,6 +891,78 @@ export function MessageComposer({
         onOpenChange={setQuickReplyOpen}
         onPick={handlePickQuickReply}
       />
+
+      {/* Send-location dialog. */}
+      <Dialog open={locationOpen} onOpenChange={setLocationOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("sendLocation")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={locating}
+              onClick={handleUseMyLocation}
+            >
+              {locating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <MapPin className="mr-2 h-4 w-4" />
+              )}
+              {t("useMyLocation")}
+            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label htmlFor="loc-lat">{t("latitude")}</Label>
+                <Input
+                  id="loc-lat"
+                  inputMode="decimal"
+                  placeholder="-23.5505"
+                  value={locationLat}
+                  onChange={(e) => setLocationLat(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="loc-lng">{t("longitude")}</Label>
+                <Input
+                  id="loc-lng"
+                  inputMode="decimal"
+                  placeholder="-46.6333"
+                  value={locationLng}
+                  onChange={(e) => setLocationLng(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="loc-name">{t("locationNameOptional")}</Label>
+              <Input
+                id="loc-name"
+                value={locationName}
+                onChange={(e) => setLocationName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="loc-address">{t("locationAddressOptional")}</Label>
+              <Input
+                id="loc-address"
+                value={locationAddress}
+                onChange={(e) => setLocationAddress(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLocationOpen(false)}>
+              {t("cancel")}
+            </Button>
+            <Button onClick={sendLocation}>
+              <Send className="mr-1 h-4 w-4" />
+              {t("send")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

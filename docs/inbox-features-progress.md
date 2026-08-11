@@ -24,7 +24,7 @@ reais confirmadas, uma por categoria que o usuário escolheu.
 
 ## Próximo passo
 
-**Funcionalidade 3 — Enviar localização.** Funcionalidades 1 e 2
+**Funcionalidade 4 — Resumir conversa por IA.** Funcionalidades 1, 2 e 3
 concluídas.
 
 ## 1 — Fixar conversas (Organização) — ✅ FEITO
@@ -95,19 +95,43 @@ concluídas.
 - [x] Gate completo: lint (0 erros), typecheck (0 erros), 792/792
       testes, build OK.
 
-## 3 — Enviar localização (Mais tipos de mensagem) — ⬜ NÃO INICIADO
+## 3 — Enviar localização (Mais tipos de mensagem) — ✅ FEITO
 
-- [ ] `src/lib/whatsapp/meta-api.ts`: função de envio de localização
-      (payload `{type:'location', location:{...}}`).
-- [ ] `src/lib/whatsapp/send-message.ts`: `messageType: 'location'` +
-      validação de lat/lng em `validateSendMessageParams`.
-- [ ] `message-composer.tsx`: item "Enviar localização" no menu "+",
-      diálogo com geolocalização do navegador + entrada manual.
-- [ ] Confirmar que `message-bubble.tsx` renderiza location outbound
-      (já renderiza inbound).
-- [ ] Chaves i18n nos 3 idiomas.
-- [ ] Teste de validação (lat/lng inválidos rejeitados).
-- [ ] Gate completo verde.
+- [x] `src/lib/whatsapp/meta-api.ts`: `sendLocationMessage()` — payload
+      `{type:'location', location:{latitude, longitude, name?, address?}}`,
+      mesmo formato de `sendTextMessage`.
+- [x] `src/lib/whatsapp/send-message.ts`: `'location'` adicionado a
+      `VALID_MESSAGE_TYPES` (não é `MediaKind` — não é um link que o
+      Meta busca, é lat/lng inline no payload). Validação de lat
+      (-90..90) e lng (-180..180) em `validateSendMessageParams`. Texto
+      persistido (`content_text`) e o preview da conversa
+      (`last_message_text`) usam a MESMA formatação que o webhook já
+      usa pra localização recebida (`[nome, endereço, "lat,lon"].filter(Boolean).join(' - ')`)
+      — bolha de enviado e recebido ficam visualmente idênticas.
+- [x] `src/app/api/whatsapp/send/route.ts`: repassa `location` do corpo
+      da requisição pro core de envio.
+- [x] `message-composer.tsx`: item "Enviar localização" no menu de
+      anexos, diálogo com botão "Usar minha localização atual"
+      (`navigator.geolocation`) + campos manuais de latitude/longitude/
+      nome/endereço, validação client-side antes de enviar.
+- [x] `message-thread.tsx`: `handleSendLocation` (mesmo padrão de
+      `handleSendMedia`/`handleSendInteractive` — bolha otimista, POST
+      pra `/api/whatsapp/send`, marca `sent`/`failed`).
+- [x] `message-bubble.tsx` já renderizava location — confirmado que
+      cobre outbound sem mudança (é só `content_text` + ícone de pin).
+- [x] Chaves i18n (`sendLocation`, `useMyLocation`, `latitude`,
+      `longitude`, etc.) nos 3 idiomas.
+- [x] **Testes de verdade** (não só verificação manual — essa
+      funcionalidade tem lógica de validação pura, testável): 4 casos
+      novos em `send-message.test.ts` (location ausente, latitude
+      inválida, longitude inválida, valores de fronteira ±90/±180
+      aceitos).
+- [x] Verificação end-to-end via script Playwright descartável: abriu
+      o diálogo, confirmou rejeição client-side com campos vazios,
+      preencheu lat/lng válidos, confirmou que a bolha otimista
+      renderiza o texto composto corretamente. Script apagado depois.
+- [x] Gate completo: lint (0 erros), typecheck (0 erros), **796/796
+      testes**, build OK.
 
 ## 4 — Resumir conversa sob demanda (IA) — ⬜ NÃO INICIADO
 
