@@ -175,7 +175,15 @@
       "selectConversation": "Selecione uma conversa",
       "selectConversationHint": "Escolha uma conversa à esquerda para começar a conversar",
       "today": "Hoje",
-      "yesterday": "Ontem"
+      "yesterday": "Ontem",
+      "aiSummarize": "Resumir conversa",
+      "aiSummarizing": "Resumindo…",
+      "aiSummaryClose": "Fechar",
+      "aiSummarySaveAsNote": "Salvar como nota",
+      "aiSummaryNotConfigured": "A IA ainda não está configurada — ative em Configurações → Assistente de IA.",
+      "aiSummaryFailed": "Não foi possível resumir esta conversa.",
+      "aiSummarySaveFailed": "Não foi possível salvar o resumo como nota.",
+      "aiSummarySaved": "Resumo salvo como nota."
     },
     "sessionTimer": {
       "expired": "Expirado",

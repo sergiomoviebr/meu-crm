@@ -27,12 +27,23 @@ import {
   RefreshCw,
   PanelRightOpen,
   PanelRightClose,
+  Sparkles,
+  Loader2,
+  StickyNote,
 } from "lucide-react";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import type { Locale } from "date-fns";
 import { useTranslations, useLocale } from "next-intl";
 import { getDateFnsLocale } from "@/lib/date-fns-locale";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -181,7 +192,7 @@ export function MessageThread({
   const tQuote = useTranslations("Inbox.replyQuote");
   const dateFnsLocale = getDateFnsLocale(useLocale());
 
-  const { user } = useAuth();
+  const { user, accountId } = useAuth();
   const { getPresence, getRow, now } = usePresence();
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -210,6 +221,67 @@ export function MessageThread({
       refreshTimerRef.current = null;
     }, 700);
   }, [isRefreshing, onRefresh]);
+  // On-demand AI summary dialog (Fase 1.4 — Resumir conversa).
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
+  const [summaryText, setSummaryText] = useState("");
+  const [savingSummaryNote, setSavingSummaryNote] = useState(false);
+
+  const handleSummarize = useCallback(async () => {
+    if (!conversation || summarizing) return;
+    setSummaryOpen(true);
+    setSummarizing(true);
+    setSummaryText("");
+    try {
+      const res = await fetch("/api/ai/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation_id: conversation.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (data.code === "ai_not_configured") {
+          toast.error(t("aiSummaryNotConfigured"));
+        } else {
+          toast.error(data.error ?? t("aiSummaryFailed"));
+        }
+        setSummaryOpen(false);
+        return;
+      }
+      setSummaryText(typeof data.summary === "string" ? data.summary.trim() : "");
+    } catch {
+      toast.error(t("aiSummaryFailed"));
+      setSummaryOpen(false);
+    } finally {
+      setSummarizing(false);
+    }
+  }, [conversation, summarizing, t]);
+
+  const handleSaveSummaryAsNote = useCallback(async () => {
+    if (!conversation || !accountId || !summaryText.trim()) return;
+    setSavingSummaryNote(true);
+    try {
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const { error } = await supabase.from("conversation_notes").insert({
+        conversation_id: conversation.id,
+        account_id: accountId,
+        user_id: session?.user?.id,
+        note_text: summaryText.trim(),
+      });
+      if (error) {
+        toast.error(t("aiSummarySaveFailed"));
+        return;
+      }
+      toast.success(t("aiSummarySaved"));
+      setSummaryOpen(false);
+    } finally {
+      setSavingSummaryNote(false);
+    }
+  }, [conversation, accountId, summaryText, t]);
+
   const [replyTo, setReplyTo] = useState<ReplyDraft | null>(null);
   // Which attachment the media viewer is showing. Lives here rather than in
   // the bubble so the viewer can page through every image/video in the
@@ -1055,6 +1127,24 @@ export function MessageThread({
             </button>
           )}
 
+          {/* On-demand AI summary — a real LLM call (not the deterministic
+              handoff-summary in src/lib/ai/handoff.ts), for an agent about
+              to pick up a conversation they haven't read. */}
+          <button
+            type="button"
+            onClick={handleSummarize}
+            disabled={summarizing}
+            aria-label={t("aiSummarize")}
+            title={t("aiSummarize")}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60"
+          >
+            {summarizing ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
+          </button>
+
           {/* Status dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className={cn(
@@ -1267,6 +1357,44 @@ export function MessageThread({
         onActiveIdChange={handleMediaChange}
         contactLabel={contactDisplayName}
       />
+
+      {/* On-demand AI summary. */}
+      <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              {t("aiSummarize")}
+            </DialogTitle>
+          </DialogHeader>
+          {summarizing ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {t("aiSummarizing")}
+            </div>
+          ) : (
+            <p className="max-h-[50vh] overflow-y-auto whitespace-pre-wrap text-sm text-foreground">
+              {summaryText}
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSummaryOpen(false)}>
+              {t("aiSummaryClose")}
+            </Button>
+            <Button
+              disabled={summarizing || !summaryText.trim() || savingSummaryNote}
+              onClick={handleSaveSummaryAsNote}
+            >
+              {savingSummaryNote ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : (
+                <StickyNote className="mr-1 h-4 w-4" />
+              )}
+              {t("aiSummarySaveAsNote")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

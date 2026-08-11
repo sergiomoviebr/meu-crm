@@ -24,8 +24,9 @@ reais confirmadas, uma por categoria que o usuário escolheu.
 
 ## Próximo passo
 
-**Funcionalidade 4 — Resumir conversa por IA.** Funcionalidades 1, 2 e 3
-concluídas.
+**As 4 funcionalidades da Fase 1 estão concluídas.** Não há próximo
+passo obrigatório — o backlog abaixo (Fase 2+) não está agendado. Se
+retomar, escolher um item de lá com o usuário antes de começar.
 
 ## 1 — Fixar conversas (Organização) — ✅ FEITO
 
@@ -133,21 +134,51 @@ concluídas.
 - [x] Gate completo: lint (0 erros), typecheck (0 erros), **796/796
       testes**, build OK.
 
-## 4 — Resumir conversa sob demanda (IA) — ⬜ NÃO INICIADO
+## 4 — Resumir conversa sob demanda (IA) — ✅ FEITO
 
-- [ ] `src/lib/ai/summarize.ts`: `generateSummary()` reaproveitando os
-      adapters existentes de `src/lib/ai/providers/*` — nenhum adapter
-      novo.
-- [ ] `src/app/api/ai/summarize/route.ts`: espelha
-      `src/app/api/ai/draft/route.ts` (auth, rate limit, erros).
-- [ ] Novo bucket `aiSummary` em `src/lib/rate-limit.ts`.
-- [ ] Botão "Resumir conversa" no header de `message-thread.tsx`,
-      popover/dialog com o resultado + botão "Salvar como nota" (usa a
+- [x] `src/lib/ai/summarize.ts`: `generateSummary()` chama
+      `generateReply()` (`generate.ts`) com um system prompt PRÓPRIO
+      pra resumir (não reaproveita `buildSystemPrompt`, que é
+      especificamente pra "escrever a próxima resposta" — resumir é
+      uma tarefa diferente). Nenhum adapter novo — o dispatch por
+      provider já existente é reaproveitado por completo.
+- [x] Migration `040_ai_summary_mode.sql`: alarga o `CHECK` de
+      `ai_usage_log.mode` pra incluir `'summary'` (antes só
+      `'auto_reply' | 'draft'`).
+- [x] `src/app/api/ai/summarize/route.ts`: espelha
+      `src/app/api/ai/draft/route.ts` quase linha a linha (auth via
+      `requireRole('agent')`, rate limit, erros de `AiError`).
+- [x] Novo bucket `aiSummary` (10/min por usuário) em
+      `src/lib/rate-limit.ts`.
+- [x] Botão "Resumir conversa" (ícone `Sparkles`) no header de
+      `message-thread.tsx`, diálogo com o resultado + botão "Salvar
+      como nota" que grava direto em `conversation_notes` (reusa a
       funcionalidade 2).
-- [ ] Log de uso via `src/lib/ai/usage.ts` (mesmo padrão do draft).
-- [ ] Chaves i18n nos 3 idiomas.
-- [ ] Teste com providers mockados (padrão de `src/lib/ai/**.test.ts`).
-- [ ] Gate completo verde.
+- [x] Log de uso via `src/lib/ai/usage.ts` — `mode: 'summary'`.
+- [x] **Bug real encontrado e corrigido pelo caminho**: o dashboard de
+      uso de IA (`GET /api/ai/usage`, `src/components/agents/ai-usage.tsx`)
+      tinha `mode` fechado em `'auto_reply' | 'draft'` com um objeto
+      `byMode` inicializado só com essas duas chaves — uma linha com
+      `mode: 'summary'` causaria `byMode['summary'].calls += 1` em
+      `undefined`, quebrando a rota com 500 assim que alguém usasse o
+      resumo. Corrigido: tipo widened, terceira chave `summary`
+      adicionada ao `byMode`, novo card "Summaries" no dashboard
+      (grid ajustado de 4 pra 5 colunas).
+- [x] Chaves i18n (`aiSummarize`, `aiSummarizing`, etc.) em
+      `Inbox.messageThread` nos 3 idiomas.
+- [x] Testes com providers mockados: `src/lib/ai/summarize.test.ts` (3
+      casos — OpenAI retorna resumo + uso corretamente, o system
+      prompt é o de resumo (não o de rascunho de resposta), Anthropic
+      também funciona via o mesmo dispatch).
+- [x] Verificação end-to-end via script Playwright descartável:
+      confirmado que o clique abre o diálogo e a chamada chega até a
+      API — como este ambiente não tem chave de IA real configurada,
+      o caminho testado ao vivo foi o de erro esperado ("IA não
+      configurada"), que é o comportamento correto aqui; o caminho de
+      sucesso já está coberto pelos testes unitários com providers
+      mockados. Script apagado depois.
+- [x] Gate completo: lint (0 erros), typecheck (0 erros), **799/799
+      testes**, build OK.
 
 ## Backlog (Fase 2+, não agendado)
 

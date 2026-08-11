@@ -165,6 +165,12 @@ export const RATE_LIMITS = {
    *  key past the provider's own rate limit. 60/min ≈ three busy agents
    *  drafting flat-out. */
   aiDraftAccount: { limit: 60, windowMs: 60_000 },
+  /** On-demand "Summarize this conversation", per user. Lower than
+   *  aiDraft (20/min) since a summary is a deliberate one-off click per
+   *  conversation an agent opens, not something clicked repeatedly while
+   *  drafting — 10/min is generous for that while still bounding spend
+   *  on the account's own LLM key against an accidental hold-down. */
+  aiSummary: { limit: 10, windowMs: 60_000 },
   /** AI auto-reply generation, per account. The per-conversation cap
    *  (`auto_reply_max_per_conversation`) bounds one thread; this bounds
    *  the whole account across threads, so a burst of inbound from many

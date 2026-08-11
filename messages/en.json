@@ -175,7 +175,15 @@
       "selectConversation": "Select a conversation",
       "selectConversationHint": "Choose a conversation from the left to start messaging",
       "today": "Today",
-      "yesterday": "Yesterday"
+      "yesterday": "Yesterday",
+      "aiSummarize": "Summarize conversation",
+      "aiSummarizing": "Summarizing…",
+      "aiSummaryClose": "Close",
+      "aiSummarySaveAsNote": "Save as note",
+      "aiSummaryNotConfigured": "AI isn't set up yet — enable it in Settings → AI Assistant.",
+      "aiSummaryFailed": "Couldn't summarize this conversation.",
+      "aiSummarySaveFailed": "Couldn't save the summary as a note.",
+      "aiSummarySaved": "Summary saved as a note."
     },
     "sessionTimer": {
       "expired": "Expired",
