@@ -6,10 +6,12 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 /**
  * Baseline security headers applied to every response.
  *
- * CSP ships as `Content-Security-Policy-Report-Only` so the browser
- * surfaces violations in the console without blocking anything — once
- * we have confidence nothing legit trips it (two deploys, a pass on
- * every route), flip the key to `Content-Security-Policy` to enforce.
+ * CSP is enforced (`Content-Security-Policy`, not Report-Only) — see
+ * docs/adr/0004-csp-enforcement-criteria.md for the decision and the
+ * criteria that justified flipping it while this fork is still a local
+ * dev environment with no real production traffic. If a legitimate
+ * asset/script gets blocked, widen the specific directive that failed
+ * rather than reverting to Report-Only wholesale.
  *
  * The rest of the headers are straight blocks, safe to enforce today:
  *   - HSTS: only meaningful on HTTPS (no-op on http://localhost).
@@ -36,7 +38,7 @@ const SECURITY_HEADERS = [
     value: "camera=(), microphone=(self), geolocation=(), payment=(), usb=()",
   },
   {
-    key: "Content-Security-Policy-Report-Only",
+    key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
       // Next.js needs 'unsafe-inline' for its inline hydration script

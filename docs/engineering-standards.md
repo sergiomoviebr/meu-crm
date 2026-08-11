@@ -118,11 +118,21 @@ serving one CRM). The existing shape is a pragmatic hybrid, keep it:
   `flows/cron/route.ts` follows the same `timingSafeEqual` pattern for a
   shared-secret (not HMAC) scheme.
 - **Security headers**: set in `next.config.ts` (HSTS, X-Content-Type-Options,
-  X-Frame-Options, Referrer-Policy, Permissions-Policy) and already
-  enforced. CSP currently ships as `Content-Security-Policy-Report-Only`
-  — not yet blocking anything. See [ADR 0004](./adr/0004-csp-enforcement-criteria.md)
-  (once written — Phase 1 item) for the exact criteria to flip it to
-  enforcing.
+  X-Frame-Options, Referrer-Policy, Permissions-Policy, and — since
+  [ADR 0004](./adr/0004-csp-enforcement-criteria.md) — an enforced CSP,
+  not Report-Only) and applied to every response.
+- **CORS on `/api/v1/*`**: deliberately unconfigured — the public API is
+  designed for server-to-server callers (integrations, automations,
+  scripts holding a bearer key), not for a third-party site's
+  browser-side JS. No `Access-Control-Allow-Origin` header is set, so a
+  browser blocks a cross-origin `fetch()` to it by default; a
+  server-side caller is unaffected (CORS is a browser-enforced
+  mechanism only). If a future need requires a browser-embedded
+  integration (e.g. a JS widget calling the API directly from a
+  third-party page), that needs an explicit origin allowlist — don't
+  add a wildcard `Access-Control-Allow-Origin: *`, which would let any
+  site's script use a stolen/leaked bearer key on behalf of a victim's
+  browser session.
 - **Input validation**: every `/api/v1/*` write route (`contacts`,
   `contacts/[id]`, `messages`, `broadcasts`, `webhooks`,
   `webhooks/[id]`) parses its JSON body through `zod` via

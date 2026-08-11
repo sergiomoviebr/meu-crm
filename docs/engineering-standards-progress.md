@@ -29,12 +29,10 @@ antes de ser marcado como concluído.
 
 ## Próximo passo
 
-**Fase 1, Passo 1.4** — decidir COM O USUÁRIO o critério de enforcement
-do CSP (não é um passo de execução autônoma — precisa de uma decisão de
-produto/ops que só o usuário pode tomar). Se a sessão for retomada sem
-essa decisão ainda tomada, perguntar antes de continuar. Alternativa: se
-o usuário preferir, pular para a Fase 2 (observabilidade) e voltar ao
-CSP/CORS depois — nenhuma das duas depende da outra.
+**Fase 2, Passo 2.1** — criar `src/lib/logger.ts` (wrapper estruturado
+sobre `console.*`) e migrar os pontos mais críticos (webhook do
+WhatsApp, rotas de cron, `toErrorResponse`/`toApiErrorResponse`). Ver
+checklist detalhado na seção "Fase 2" abaixo. Fase 1 está 100% concluída.
 
 ---
 
@@ -47,7 +45,7 @@ CSP/CORS depois — nenhuma das duas depende da outra.
 - [x] `CLAUDE.md` referencia `docs/engineering-standards.md`
 - [x] `CONTRIBUTING.md` ganhou a seção "Definition of Done"
 
-## Fase 1 — Gaps de segurança/correção de maior risco — 🔄 EM ANDAMENTO
+## Fase 1 — Gaps de segurança/correção de maior risco — ✅ CONCLUÍDA
 
 ### 1.1 — Teste de isolamento cross-tenant para `/api/v1/*` — ✅ FEITO
 - [x] Investigação: todas as rotas `/api/v1/*` por-id (`contacts/[id]`,
@@ -139,26 +137,30 @@ CSP/CORS depois — nenhuma das duas depende da outra.
       de prioridade menor, só quando cada rota for tocada por outro
       trabalho.
 
-### 1.4 — Critério de enforcement do CSP — ⬜ NÃO INICIADO
-- [ ] Decidir com o usuário: qual critério objetivo aciona a troca de
-      `Content-Security-Policy-Report-Only` para `Content-Security-Policy`
-      enforcing em `next.config.ts` (ex.: N dias em produção sem
-      violação relatada — mas hoje não há coleta de `report-uri`, então
-      a primeira sub-tarefa real pode ser decidir SE vale configurar um
-      endpoint de report antes de conseguir medir isso)
-- [ ] Documentar a decisão em `docs/adr/0004-csp-enforcement-criteria.md`
-- [ ] Se o critério já puder ser satisfeito (ex.: usuário confirma que
-      não há necessidade de coletar reports, é ambiente de dev único),
-      aplicar a mudança em `next.config.ts`
+### 1.4 — Critério de enforcement do CSP — ✅ FEITO
+- [x] Decisão (usuário): ativar enforcing agora, já que este ambiente é
+      só dev local, sem tráfego de produção — violação encontrada em
+      dev é corrigida na hora, sem custo de esperar.
+- [x] `docs/adr/0004-csp-enforcement-criteria.md` documenta a decisão.
+- [x] `next.config.ts`: header trocado de `Content-Security-Policy-Report-Only`
+      para `Content-Security-Policy` (nenhuma diretiva mudou de valor).
+      Confirmado via `curl`/`Invoke-WebRequest` no servidor dev
+      reiniciado: header correto sendo servido, header Report-Only
+      ausente.
+- [x] Gate completo rodado: 770/770 testes, build OK.
 
-### 1.5 — Política de CORS para `/api/v1/*` — ⬜ NÃO INICIADO
-- [ ] Decidir com o usuário: a API pública deve aceitar chamadas
-      cross-origin do navegador (ex.: um app de terceiros rodando no
-      browser do integrador) ou é só server-to-server (nesse caso CORS
-      explícito é desnecessário, o bearer token já não é enviado
-      automaticamente por navegador em cross-origin sem CORS liberado)
-- [ ] Documentar a decisão (mesmo que seja "não fazer nada", documentar
-      o porquê) em `docs/engineering-standards.md` → Security
+### 1.5 — Política de CORS para `/api/v1/*` — ✅ FEITO
+- [x] Decisão (usuário): só server-to-server, sem CORS liberado —
+      integrações chamam a API a partir de um backend, não do navegador
+      do usuário final.
+- [x] Nenhuma mudança de código necessária (a ausência de
+      `Access-Control-Allow-Origin` já é o comportamento desejado —
+      CORS é uma restrição do navegador, chamadas servidor-a-servidor
+      não são afetadas).
+- [x] Decisão documentada em `docs/engineering-standards.md` → Security,
+      incluindo o aviso de não usar `Access-Control-Allow-Origin: *` se
+      um dia precisar liberar (risco de vazamento de bearer key via
+      script de terceiro).
 
 ## Fase 2 — Observabilidade — ⬜ NÃO INICIADO
 
