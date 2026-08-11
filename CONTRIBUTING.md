@@ -103,6 +103,50 @@ closed — open the issue first to align.
   is appreciated but not required.
 - You are free to re-license additions to your fork however you like.
 
+## Definition of Done
+
+A change isn't done because it works in the happy path. Before you
+consider a feature/fix finished in this fork, check it against this list —
+it's the concrete, tool-backed version of the reasoning in
+[`docs/engineering-standards.md`](./docs/engineering-standards.md):
+
+- [ ] `npm run lint && npm run typecheck && npm test && npm run build` all
+      pass locally (this is exactly `.github/workflows/ci.yml`'s gate).
+- [ ] New tenant-scoped table → `account_id` FK + `idx_<table>_account`
+      index + an `is_account_member(...)`-based RLS policy, following
+      `supabase/migrations/017_account_sharing.sql`'s pattern (see
+      [ADR 0001](./docs/adr/0001-multi-tenant-rls.md)).
+- [ ] New secret stored in the DB → goes through
+      `src/lib/whatsapp/encryption.ts`'s `encrypt()`/`decrypt()`, never
+      plaintext, never logged.
+- [ ] New API route → `requireRole()` (dashboard) or `requireApiKey()`
+      (public `/api/v1`) at the top; a rate-limit bucket in
+      `src/lib/rate-limit.ts` if it's write-capable; a route-level test
+      following `src/app/api/whatsapp/send/route.test.ts`.
+- [ ] New `/api/v1/*` route specifically → a cross-tenant isolation test
+      (two accounts, assert no leakage) — this is the one layer without
+      an RLS safety net.
+- [ ] New inbound webhook → signature/secret verification that fails
+      closed, matching `src/lib/whatsapp/webhook-signature.ts`.
+- [ ] New user-facing string → added to **all** locale files
+      (`messages/en.json`, `messages/ko.json`, `messages/pt-BR.json`);
+      `npx vitest run src/i18n/messages.test.ts` catches a missed one.
+- [ ] New date/time display → `date-fns` call passes
+      `{ locale: getDateFnsLocale(useLocale()) }`
+      (`src/lib/date-fns-locale.ts`), not the bare English default.
+- [ ] Loading, empty, and error states exist for anything that fetches
+      data — not just the populated-happy-path render.
+- [ ] Failure paths tested, not just success: invalid input, missing
+      auth, the external API actually erroring (see existing
+      `meta-api.test.ts` / `webhook-signature.test.ts` for the pattern),
+      not only the 200 case.
+- [ ] No `console.log`/`console.error` of a secret, decrypted token, or
+      raw `Authorization` header.
+- [ ] No new abstraction (adapter interface, queue, service layer) added
+      without a second concrete implementation or a measured problem it
+      solves — see `docs/engineering-standards.md`'s Architecture section
+      and the linked ADRs for what's already been deliberately deferred.
+
 ## Dev-loop reference
 
 Even if you never send a PR upstream, these are the scripts you'll use
