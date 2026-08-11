@@ -3,6 +3,32 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+const isDev = process.env.NODE_ENV !== "production";
+
+/**
+ * Local Supabase (started via `supabase start`) serves plain HTTP on a
+ * non-standard port (e.g. `http://127.0.0.1:54321`), not the
+ * `https://*.supabase.co` domain a hosted project uses. Enforced CSP's
+ * `connect-src` otherwise silently breaks every Supabase call in local
+ * dev — auth, REST, realtime — with a bare "Failed to fetch" (caught by
+ * e2e/smoke.spec.ts, which is what surfaced this). Scoped to
+ * development only so a production build keeps the tighter,
+ * hosted-only policy.
+ */
+const localSupabaseOrigin = (() => {
+  if (!isDev) return null;
+  try {
+    const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+    if (url.hostname === "127.0.0.1" || url.hostname === "localhost") {
+      return url.origin;
+    }
+  } catch {
+    // NEXT_PUBLIC_SUPABASE_URL unset or malformed — nothing to add.
+  }
+  return null;
+})();
+const localSupabaseWs = localSupabaseOrigin?.replace(/^http/, "ws") ?? null;
+
 /**
  * Baseline security headers applied to every response.
  *
@@ -57,7 +83,15 @@ const SECURITY_HEADERS = [
       "font-src 'self' data:",
       // Supabase REST + realtime (WSS). All Meta API calls happen
       // server-side, so graph.facebook.com does not belong here.
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+      // Local dev additionally allows the local Supabase origin — see
+      // localSupabaseOrigin above.
+      [
+        "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+        localSupabaseOrigin,
+        localSupabaseWs,
+      ]
+        .filter(Boolean)
+        .join(" "),
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

@@ -48,3 +48,21 @@ while is the one now enforced.
   (e.g. embedding a new widget), widen exactly that directive in
   `next.config.ts`'s `SECURITY_HEADERS` — don't drop back to
   Report-Only as a workaround.
+
+## Addendum (2026-08-11): local Supabase broke on first real test
+
+Enforcing CSP immediately broke signup/auth in local dev: `connect-src`
+only allowed `https://*.supabase.co`, but a local Supabase instance
+(`supabase start`) serves plain HTTP on `http://127.0.0.1:54321` — every
+auth/REST/realtime call failed with a bare "Failed to fetch" and no CSP
+violation message in the console, making it easy to miss. This was
+caught by `e2e/smoke.spec.ts` (Fase 3.3) on its very first run, not by
+manual testing — a concrete argument for the E2E suite existing at all.
+
+Fixed in `next.config.ts`: `connect-src` now conditionally includes the
+local Supabase origin (derived from `NEXT_PUBLIC_SUPABASE_URL`), gated
+on `NODE_ENV !== "production"` so a production build keeps the original,
+tighter hosted-only policy. This doesn't change the enforcement decision
+above — it's exactly the kind of "widen the specific directive that
+failed" response the original ADR text already called for, just
+documenting that it happened and why.

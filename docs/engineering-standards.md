@@ -120,7 +120,10 @@ serving one CRM). The existing shape is a pragmatic hybrid, keep it:
 - **Security headers**: set in `next.config.ts` (HSTS, X-Content-Type-Options,
   X-Frame-Options, Referrer-Policy, Permissions-Policy, and — since
   [ADR 0004](./adr/0004-csp-enforcement-criteria.md) — an enforced CSP,
-  not Report-Only) and applied to every response.
+  not Report-Only) and applied to every response. `connect-src`
+  conditionally allows the local Supabase origin in development only
+  (derived from `NEXT_PUBLIC_SUPABASE_URL`, see ADR 0004's addendum) —
+  production keeps the tighter hosted-only policy.
 - **CORS on `/api/v1/*`**: deliberately unconfigured — the public API is
   designed for server-to-server callers (integrations, automations,
   scripts holding a bearer key), not for a third-party site's
@@ -161,9 +164,31 @@ serving one CRM). The existing shape is a pragmatic hybrid, keep it:
 
 ## Testing
 
-- Vitest is the only test runner (`vitest.config.ts`, node environment,
-  dummy `ENCRYPTION_KEY`/`META_APP_SECRET` injected for tests that touch
-  encryption). No Playwright/Cypress yet (Phase 3 backlog item).
+- Vitest is the unit/integration-with-mocks runner (`vitest.config.ts`,
+  node environment, dummy `ENCRYPTION_KEY`/`META_APP_SECRET` injected for
+  tests that touch encryption).
+- Playwright covers one real-browser golden-path smoke test
+  (`e2e/smoke.spec.ts`) — sign up → dashboard → create a contact,
+  against the real local Supabase stack. See `e2e/README.md` for how to
+  run it (needs `supabase start` + `npm run dev` already up; not wired
+  into CI yet, no Supabase-in-CI step exists). `npm run test:e2e` runs
+  it. Keep this suite small and golden-path-only — it's a regression
+  net for "the app doesn't boot," not a place to grow exhaustive
+  coverage (that's what the Vitest suite above is for).
+  **A known, unresolved issue surfaced by this suite**: a plain
+  `<Button type="submit">` (`src/components/ui/button.tsx`, wrapping
+  `@base-ui/react`'s `Button`) with no explicit `onClick` does not
+  submit its form when clicked via Playwright — no network call, no
+  state change, nothing. `form.requestSubmit()` and pressing Enter in a
+  field both work correctly. The smoke test works around it by
+  submitting via Enter (a legitimate real-user interaction, not a fake
+  pass), but this needs a human to confirm with a real mouse in a real
+  browser whether it's a genuine `@base-ui/react` interaction bug
+  (possibly version-specific — `package.json` currently pins
+  `"@base-ui/react": "^1.6.0"`) that could affect real users clicking
+  "Save"/"Create" buttons app-wide, or a Playwright/synthetic-event
+  artifact that doesn't reproduce for a human. Don't treat it as
+  confirmed-safe or confirmed-broken without that check.
 - Business-critical modules already have strong coverage — match this bar
   for new engine/crypto/webhook code: `src/lib/automations/*.test.ts`,
   `src/lib/flows/*.test.ts`, `src/lib/whatsapp/{send-message,broadcast-core,

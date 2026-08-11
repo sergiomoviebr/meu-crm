@@ -29,9 +29,25 @@ antes de ser marcado como concluído.
 
 ## Próximo passo
 
-**Fase 3, Passo 3.3** — adicionar Playwright e um teste de fumaça E2E do
-caminho crítico (login → inbox → enviar mensagem → aparece na
-conversa). Fases 1, 2 e 3.1-3.2 concluídas.
+**O rollout planejado (Fases 0-3) está 100% concluído.** Não há próximo
+passo obrigatório — só um achado real que precisa de uma decisão sua:
+
+⚠️ **Achado não resolvido, precisa de decisão do usuário**: o teste E2E
+descobriu que clicar em `<Button type="submit">` sem `onClick` explícito
+(`src/components/ui/button.tsx`, usa `@base-ui/react` — versão
+`^1.6.0`) **não envia o formulário** — nenhuma requisição, nenhum toast,
+nada acontece. `form.requestSubmit()` e a tecla Enter funcionam
+perfeitamente. O teste de fumaça contorna isso submetendo com Enter (uma
+interação real e válida), mas isso pode ser um bug real afetando
+usuários reais clicando em botões "Salvar"/"Criar" no app inteiro — ou
+pode ser específico do Playwright/Chromium headless e não reproduzir com
+mouse de verdade num navegador de verdade. **Precisa de alguém testando
+manualmente num navegador real pra confirmar se é um problema de
+produção ou não.** Detalhes completos em
+`docs/engineering-standards.md` → Testing, e no comentário no topo de
+`e2e/smoke.spec.ts`. A Fase 4 (backlog futuro, não agendado) é o único
+outro item pendente, e só entra em pauta se algum dos gatilhos
+descritos lá acontecer de verdade.
 
 ---
 
@@ -203,7 +219,7 @@ conversa). Fases 1, 2 e 3.1-3.2 concluídas.
       usado pra chaves de IA (`src/lib/ai/config.ts`), documentado em
       `docs/engineering-standards.md` → Observability.
 
-## Fase 3 — Testes — 🔄 EM ANDAMENTO (falta só 3.3)
+## Fase 3 — Testes — ✅ CONCLUÍDA
 
 ### 3.1 — Completar lacunas em rotas externas/sensíveis — ✅ FEITO
 - [x] Levantamento: só 3 rotas tinham teste de rota antes desta fase
@@ -247,11 +263,42 @@ conversa). Fases 1, 2 e 3.1-3.2 concluídas.
       requisição toda.
 - [x] Gate completo: **792/792 testes** (82 arquivos), build OK.
 
-### 3.3 — Playwright E2E
-- [ ] Adicionar Playwright como devDependency
-- [ ] Um teste de fumaça: login → inbox → enviar mensagem → aparece na
-      conversa
-- [ ] Job separado no CI, não bloqueante inicialmente
+### 3.3 — Playwright E2E — ✅ FEITO
+- [x] `@playwright/test` instalado como devDependency + binário do
+      Chromium baixado (`npx playwright install chromium`).
+      `playwright.config.ts` na raiz (1 browser só, sem `webServer`
+      auto-start — Supabase não dá pra subir do mesmo jeito, então um
+      stack pela metade daria erro confuso em vez de um "servidor não
+      está rodando" limpo).
+- [x] **Escopo ajustado**: o caminho "login → inbox → enviar mensagem"
+      do plano original não é executável neste ambiente — não há
+      credencial real da API do WhatsApp Business (`META_APP_SECRET` é
+      placeholder). O teste de fumaça cobre o caminho que É executável
+      sem credenciais externas: cadastro → autenticado no dashboard →
+      criar um contato pela UI de verdade contra o Supabase local de
+      verdade. Ainda é uma volta completa boot-até-banco por um
+      navegador real, não mock.
+- [x] `e2e/smoke.spec.ts` + `e2e/README.md` (como rodar localmente).
+      `npm run test:e2e` roda a suíte. Rodado 2x seguidas pra confirmar
+      estabilidade (não é flaky).
+- [x] **Achado real #1 (corrigido)**: o CSP que acabamos de ativar na
+      Fase 1.4 quebrou o cadastro de verdade — `connect-src` só
+      permitia `https://*.supabase.co`, e o Supabase local roda em
+      `http://127.0.0.1:54321` (HTTP puro, domínio diferente). Erro
+      "Failed to fetch" sem nenhuma mensagem de violação de CSP no
+      console — fácil de passar despercebido sem um teste E2E de
+      verdade. Corrigido em `next.config.ts` (origem local do Supabase
+      adicionada ao `connect-src`, só em dev — produção mantém a
+      política mais restrita). Documentado como adendo no
+      `docs/adr/0004-csp-enforcement-criteria.md`.
+- [x] **Achado real #2 (não corrigido, precisa de decisão)**: ver aviso
+      no topo deste arquivo ("Próximo passo") — botão de submit sem
+      `onClick` explícito não envia o formulário ao ser clicado.
+- [x] Não colocado no CI ainda (precisaria de um passo "subir Supabase
+      no CI" que o `ci.yml` atual não tem) — documentado em
+      `e2e/README.md` como trabalho futuro, não bloqueante.
+- [x] Gate completo: **792/792 testes** (82 arquivos), typecheck,
+      lint (0 erros), build — todos OK.
 
 ## Fase 4 — Backlog futuro (documentado, não agendado)
 
