@@ -9,11 +9,12 @@ import {
 } from "@/lib/inbox/conversations";
 import { cn } from "@/lib/utils";
 import type { Conversation, ConversationStatus, Tag } from "@/types";
-import { Search, ChevronDown, X } from "lucide-react";
+import { Search, ChevronDown, X, Pin } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Locale } from "date-fns";
 import { useTranslations, useLocale } from "next-intl";
 import { getDateFnsLocale } from "@/lib/date-fns-locale";
+import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -57,7 +58,8 @@ export function ConversationList({
 }: ConversationListProps) {
   const t = useTranslations("Inbox.conversationList");
   const dateFnsLocale = getDateFnsLocale(useLocale());
-  
+  const { user, accountId } = useAuth();
+
   const FILTER_OPTIONS: { label: string; value: InboxFilter }[] = useMemo(() => [
     { label: t("filterAll"), value: "all" },
     { label: t("filterUnread"), value: "unread" },
@@ -75,6 +77,10 @@ export function ConversationList({
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  // Pinning is per-agent (pinned_conversations, migration 038) — each
+  // teammate curates their own priority list, so this is keyed off the
+  // signed-in user, not shared account state.
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
 
   // Keep the latest callback in a ref so the fetch effect below can
   // have a stable, empty-dep identity. Previously the fetch useCallback
@@ -143,6 +149,68 @@ export function ConversationList({
     };
   }, []);
 
+  // This user's pinned conversation ids. RLS on pinned_conversations
+  // already restricts rows to `auth.uid() = user_id`, so no explicit
+  // filter is needed here — every row returned is already ours.
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("pinned_conversations")
+        .select("conversation_id");
+      if (!cancelled && data) {
+        setPinnedIds(new Set(data.map((r) => r.conversation_id as string)));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const togglePin = useCallback(
+    async (conversationId: string) => {
+      if (!user || !accountId) return;
+      const supabase = createClient();
+      const wasPinned = pinnedIds.has(conversationId);
+
+      // Optimistic update — pinning is a low-stakes, purely personal
+      // preference, so we don't make the user wait on a round trip to
+      // see the row jump to the top of the list.
+      setPinnedIds((prev) => {
+        const next = new Set(prev);
+        if (wasPinned) next.delete(conversationId);
+        else next.add(conversationId);
+        return next;
+      });
+
+      const { error } = wasPinned
+        ? await supabase
+            .from("pinned_conversations")
+            .delete()
+            .eq("user_id", user.id)
+            .eq("conversation_id", conversationId)
+        : await supabase.from("pinned_conversations").insert({
+            account_id: accountId,
+            user_id: user.id,
+            conversation_id: conversationId,
+          });
+
+      if (error) {
+        // Revert on failure so the UI doesn't lie about what's saved.
+        console.error("Failed to toggle pin:", error);
+        setPinnedIds((prev) => {
+          const next = new Set(prev);
+          if (wasPinned) next.add(conversationId);
+          else next.delete(conversationId);
+          return next;
+        });
+      }
+    },
+    [user, accountId, pinnedIds]
+  );
+
   // Company options are derived from the loaded conversations — there's no
   // separate companies table, and only companies with a live conversation
   // are worth offering as an inbox filter.
@@ -190,8 +258,20 @@ export function ConversationList({
       });
     }
 
+    // Pinned conversations float to the top. Array.prototype.sort is
+    // stable (guaranteed since ES2019), so within each group (pinned /
+    // unpinned) the existing last_message_at DESC order from the query
+    // is preserved — this only partitions, it doesn't re-sort.
+    if (pinnedIds.size > 0) {
+      result = [...result].sort((a, b) => {
+        const aPinned = pinnedIds.has(a.id) ? 1 : 0;
+        const bPinned = pinnedIds.has(b.id) ? 1 : 0;
+        return bPinned - aPinned;
+      });
+    }
+
     return result;
-  }, [conversations, filter, search, selectedTagIds, selectedCompany]);
+  }, [conversations, filter, search, selectedTagIds, selectedCompany, pinnedIds]);
 
   const toggleTag = useCallback((id: string) => {
     setSelectedTagIds((prev) =>
@@ -418,6 +498,8 @@ export function ConversationList({
                 onSelect={handleSelect}
                 t={t}
                 dateFnsLocale={dateFnsLocale}
+                isPinned={pinnedIds.has(conv.id)}
+                onTogglePin={togglePin}
               />
             ))}
           </div>
@@ -433,6 +515,8 @@ interface ConversationItemProps {
   onSelect: (conversation: Conversation) => void;
   t: ReturnType<typeof useTranslations>;
   dateFnsLocale: Locale;
+  isPinned: boolean;
+  onTogglePin: (conversationId: string) => void;
 }
 
 function ConversationItem({
@@ -441,6 +525,8 @@ function ConversationItem({
   onSelect,
   t,
   dateFnsLocale,
+  isPinned,
+  onTogglePin,
 }: ConversationItemProps) {
   const contact = conversation.contact;
   const displayName = contact?.name || contact?.phone || t("unknown");
@@ -450,6 +536,25 @@ function ConversationItem({
     onSelect(conversation);
   }, [onSelect, conversation]);
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onSelect(conversation);
+      }
+    },
+    [onSelect, conversation]
+  );
+
+  const handlePinClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Stop the row's own click (select conversation) from also firing.
+      e.stopPropagation();
+      onTogglePin(conversation.id);
+    },
+    [onTogglePin, conversation.id]
+  );
+
   const timeAgo = conversation.last_message_at
     ? formatDistanceToNow(new Date(conversation.last_message_at), {
         addSuffix: false,
@@ -458,10 +563,17 @@ function ConversationItem({
     : "";
 
   return (
-    <button
+    // A `<button>` can't legally contain a nested `<button>` (the pin
+    // toggle below), so the row itself is a div with button semantics
+    // instead — role/tabIndex/onKeyDown keep it keyboard-operable like
+    // the native button it replaces.
+    <div
+      role="button"
+      tabIndex={0}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       className={cn(
-        "flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/50",
+        "group/row flex w-full cursor-pointer items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/50",
         isActive && "border-l-2 border-primary bg-muted/70"
       )}
     >
@@ -484,7 +596,23 @@ function ConversationItem({
           <span className="truncate text-sm font-medium text-foreground">
             {displayName}
           </span>
-          <span className="shrink-0 text-[10px] text-muted-foreground">{timeAgo}</span>
+          <span className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={handlePinClick}
+              title={isPinned ? t("unpin") : t("pin")}
+              aria-label={isPinned ? t("unpin") : t("pin")}
+              className={cn(
+                "rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground",
+                isPinned
+                  ? "opacity-100"
+                  : "opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100"
+              )}
+            >
+              <Pin className={cn("h-3 w-3", isPinned && "fill-primary text-primary")} />
+            </button>
+            <span className="text-[10px] text-muted-foreground">{timeAgo}</span>
+          </span>
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-2">
           <p className="truncate text-xs text-muted-foreground">
@@ -506,6 +634,6 @@ function ConversationItem({
           </div>
         </div>
       </div>
-    </button>
+    </div>
   );
 }

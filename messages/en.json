@@ -143,6 +143,8 @@
       "filterOpen": "Open",
       "filterPending": "Pending",
       "filterClosed": "Closed",
+      "pin": "Pin conversation",
+      "unpin": "Unpin conversation",
       "tags": "Tags",
       "company": "Company",
       "allCompanies": "All companies",

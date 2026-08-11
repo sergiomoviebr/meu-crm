@@ -143,6 +143,8 @@
       "filterOpen": "열림",
       "filterPending": "대기 중",
       "filterClosed": "닫힘",
+      "pin": "대화 고정",
+      "unpin": "고정 해제",
       "tags": "태그",
       "company": "회사",
       "allCompanies": "전체 회사",

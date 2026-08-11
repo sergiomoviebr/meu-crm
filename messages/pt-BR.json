@@ -143,6 +143,8 @@
       "filterOpen": "Abertas",
       "filterPending": "Pendentes",
       "filterClosed": "Fechadas",
+      "pin": "Fixar conversa",
+      "unpin": "Desafixar conversa",
       "tags": "Tags",
       "company": "Empresa",
       "allCompanies": "Todas as empresas",
