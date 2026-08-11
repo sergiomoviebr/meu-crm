@@ -29,10 +29,9 @@ antes de ser marcado como concluído.
 
 ## Próximo passo
 
-**Fase 3, Passo 3.2** — testes de rota para as mutações de dashboard
-mais usadas (`contacts`, `deals`, `broadcasts`), seguindo o padrão de
-`src/app/api/whatsapp/send/route.test.ts`. Fases 1 e 2 concluídas;
-Fase 3.1 (rotas de cron) concluída.
+**Fase 3, Passo 3.3** — adicionar Playwright e um teste de fumaça E2E do
+caminho crítico (login → inbox → enviar mensagem → aparece na
+conversa). Fases 1, 2 e 3.1-3.2 concluídas.
 
 ---
 
@@ -204,7 +203,7 @@ Fase 3.1 (rotas de cron) concluída.
       usado pra chaves de IA (`src/lib/ai/config.ts`), documentado em
       `docs/engineering-standards.md` → Observability.
 
-## Fase 3 — Testes — 🔄 EM ANDAMENTO
+## Fase 3 — Testes — 🔄 EM ANDAMENTO (falta só 3.3)
 
 ### 3.1 — Completar lacunas em rotas externas/sensíveis — ✅ FEITO
 - [x] Levantamento: só 3 rotas tinham teste de rota antes desta fase
@@ -224,9 +223,29 @@ Fase 3.1 (rotas de cron) concluída.
       não varrido).
 - [x] Gate completo: **785/785 testes** (81 arquivos), build OK.
 
-### 3.2 — Rotas de mutação do dashboard mais usadas — ⬜ NÃO INICIADO
-- [ ] `contacts`, `deals`, `broadcasts` — seguir o padrão de
-      `src/app/api/whatsapp/send/route.test.ts`
+### 3.2 — Rotas de mutação do dashboard mais usadas — ✅ FEITO
+- [x] **Correção ao escopo original**: `contacts` e `deals` não têm
+      rota de API própria — o dashboard escreve direto no Supabase a
+      partir dos componentes React, protegido só por RLS (não por uma
+      rota Next.js). Não há o que testar "de rota" ali; a proteção real
+      já está nas policies RLS (cobertas pelas migrations, não por
+      testes de rota). Ajustado o escopo para a rota de mutação real
+      mais crítica sem teste: `POST /api/whatsapp/broadcast` (dispatch
+      de broadcast do dashboard — distinta da rota pública
+      `/api/v1/broadcasts`).
+- [x] `src/app/api/whatsapp/broadcast/route.test.ts` (7 casos). O
+      primeiro é um **teste de regressão pra uma vulnerabilidade real já
+      documentada no próprio código**: essa rota não escreve nada no
+      banco (manda direto pro Meta), então é o único lugar do app sem
+      RLS como rede de segurança — o comentário da rota descreve que
+      antes um `viewer` conseguia disparar broadcast pra qualquer
+      número. `requireRole('agent')` corrigiu; o teste garante que
+      continua corrigido. Demais casos: agent consegue disparar,
+      validação (sem destinatários, sem template_name), rate limit
+      (429 sem chamar o Meta), telefone inválido marcado como falha sem
+      chamar o Meta, falha do Meta por destinatário não derruba a
+      requisição toda.
+- [x] Gate completo: **792/792 testes** (82 arquivos), build OK.
 
 ### 3.3 — Playwright E2E
 - [ ] Adicionar Playwright como devDependency
