@@ -180,6 +180,69 @@ retomar, escolher um item de lá com o usuário antes de começar.
 - [x] Gate completo: lint (0 erros), typecheck (0 erros), **799/799
       testes**, build OK.
 
+## Ajuste extra (fora do escopo original, pedido à parte pelo usuário)
+
+### Importação de contatos: detecção de delimitador + suporte a Excel — ✅ FEITO
+
+Usuário reportou que o CSV exportado do Excel não estava sendo
+reconhecido como separado por vírgula. Causa raiz: o parser tinha `,`
+fixo no código, mas o Excel configurado em pt-BR (e a maioria dos
+locales fora dos EUA) exporta "CSV" separado por `;` — a vírgula já é
+o separador decimal nesses locales, então usar `,` como delimitador de
+coluna também seria ambíguo. Pedido também: aceitar `.xlsx` direto,
+sem precisar exportar pra CSV antes.
+
+- `src/lib/contacts/parse-contact-csv.ts`: `detectDelimiter()` conta
+  ocorrências de `,` / `;` / tab na linha de cabeçalho (fora de campos
+  entre aspas) e usa o que aparece mais — vírgula continua sendo o
+  padrão quando nada mais aparece. Lógica de montagem de linhas
+  extraída pra `buildContactRows(headers, rows)`, compartilhada entre
+  o caminho CSV e o caminho Excel novo.
+- `src/lib/contacts/parse-contact-excel.ts` (novo): lê a primeira
+  planilha de um `.xlsx`/`.xls` com `exceljs` (import dinâmico — só
+  carrega no bundle quando alguém realmente escolhe um arquivo Excel,
+  não no carregamento normal da página de contatos) e converte pro
+  mesmo formato que o CSV já produz.
+- **Decisão de segurança**: a biblioteca `xlsx` (SheetJS) mais óbvia
+  tem 2 CVEs de severidade alta sem correção disponível no npm
+  (poluição de protótipo + ReDoS) — confirmado via `npm audit`.
+  Instalar direto do CDN oficial do SheetJS (que tem a versão corrigida)
+  foi bloqueado pelo classificador de permissões do modo automático
+  (instalar de URL arbitrária é sinalizado por padrão). Usei `exceljs`
+  no lugar — pacote padrão do npm, sem CVE relevante pro meu uso
+  (só de leitura; o único aviso do `npm audit` é numa dependência de
+  escrita/streaming que este código nunca invoca).
+- `src/components/contacts/import-modal.tsx`: aceita `.xlsx`/`.xls`
+  no seletor de arquivo, novo estado de carregamento enquanto o Excel
+  é lido (parsing é assíncrono agora), erro tratado com toast se o
+  arquivo estiver corrompido/inválido.
+- Chaves i18n atualizadas (`desc`, `uploadDropzone`, `uploadHint`) +
+  novas (`parsing`, `toastParseError`) nos 3 idiomas.
+- **Testes de verdade**: `parse-contact-csv.test.ts` ganhou casos de
+  regressão pro bug relatado (CSV com `;`, com tab, com vírgula
+  dentro de aspas mesmo em arquivo `;`-delimitado) +
+  `buildContactRows` testada isoladamente. `parse-contact-excel.test.ts`
+  (novo) — round-trip real: escreve um `.xlsx` de verdade com
+  `exceljs`, lê de volta, confirma que bate com o resultado do CSV
+  equivalente, incluindo o caso de telefone armazenado como número no
+  Excel (vira string, não é descartado).
+- Verificação end-to-end via 2 scripts Playwright descartáveis:
+  upload de CSV `;`-delimitado (confirma as duas linhas + coluna
+  "empresa" reconhecidas) e upload de um `.xlsx` de verdade gerado
+  programaticamente. Ambos passaram. Scripts apagados depois.
+- **Achado incidental, não corrigido (fora de escopo)**: a badge
+  "N linha(s) pronta(s)" no modal sempre mostra a forma singular
+  mesmo com N>1 ("2 linha pronta" em vez de "2 linhas prontas") — as
+  chaves `_plural` existem nos 3 idiomas mas o next-intl não usa essa
+  convenção de sufixo (isso é uma convenção do i18next, não do
+  next-intl — o next-intl espera sintaxe ICU tipo `{count, plural,
+  =1 {...} other {...}}` dentro de uma única chave). Provavelmente
+  afeta TODAS as chaves `*_plural` no app (são várias), não só essa —
+  é uma correção maior e separada, não fiz agora por estar fora do
+  pedido e o usuário querer pausar.
+- Gate completo: lint (0 erros), typecheck (0 erros), **812/812
+  testes**, build OK.
+
 ## Backlog (Fase 2+, não agendado)
 
 - Busca dentro do histórico de mensagens

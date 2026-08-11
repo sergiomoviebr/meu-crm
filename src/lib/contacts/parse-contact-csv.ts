@@ -1,6 +1,8 @@
 /**
- * CSV parsing for the contacts import modal. Shared + unit-tested so
- * tag-column handling stays aligned with phone/name/email/company.
+ * Spreadsheet parsing for the contacts import modal — CSV text and
+ * pre-split rows (from an Excel file, see parse-contact-excel.ts) both
+ * funnel through the same row-building logic, so tag/company/column
+ * handling stays aligned regardless of source format.
  */
 
 export interface ParsedContactRow {
@@ -33,10 +35,51 @@ export function parseTagCell(value: string | undefined): string[] {
 
 export interface ParseContactCsvResult {
   rows: ParsedContactRow[];
-  /** True when the CSV header includes a `tags` column. */
+  /** True when the header includes a `tags` column. */
   hasTagsColumn: boolean;
-  /** True when the CSV header includes a `company` column. */
+  /** True when the header includes a `company` column. */
   hasCompanyColumn: boolean;
+}
+
+const CANDIDATE_DELIMITERS = [',', ';', '\t'] as const;
+
+/**
+ * Pick the field delimiter by counting candidates in the header line and
+ * taking whichever splits it into the most columns.
+ *
+ * Why this exists: Excel's own "Save As → CSV" export uses `,` only on
+ * an English/US-locale install. Excel configured for pt-BR (or most of
+ * Europe/Latin America) exports `;`-delimited files instead — the
+ * region's decimal separator is `,`, so a plain-comma CSV would be
+ * ambiguous for any numeric column. A hardcoded `,` split then sees a
+ * whole data row as a single field (no commas in it at all), which is
+ * exactly the "not recognizing it as comma-separated" symptom this was
+ * written to fix. Comma remains the default when nothing else appears
+ * (e.g. a single-column file), preserving prior behaviour.
+ */
+export function detectDelimiter(headerLine: string): string {
+  let best: string = CANDIDATE_DELIMITERS[0];
+  let bestCount = 0;
+  for (const delimiter of CANDIDATE_DELIMITERS) {
+    // Count occurrences outside quoted spans so a quoted field like
+    // "Doe, John" doesn't inflate the comma count for a semicolon file.
+    const count = countUnquoted(headerLine, delimiter);
+    if (count > bestCount) {
+      bestCount = count;
+      best = delimiter;
+    }
+  }
+  return best;
+}
+
+function countUnquoted(line: string, char: string): number {
+  let count = 0;
+  let inQuotes = false;
+  for (const c of line) {
+    if (c === '"') inQuotes = !inQuotes;
+    else if (c === char && !inQuotes) count++;
+  }
+  return count;
 }
 
 export function parseContactCsv(text: string): ParseContactCsvResult {
@@ -45,9 +88,30 @@ export function parseContactCsv(text: string): ParseContactCsvResult {
     return { rows: [], hasTagsColumn: false, hasCompanyColumn: false };
   }
 
-  const headers = lines[0]
-    .split(',')
-    .map((h) => h.trim().toLowerCase().replace(/["']/g, ''));
+  const delimiter = detectDelimiter(lines[0]);
+  const headerCells = parseDelimitedLine(lines[0], delimiter).map((h) =>
+    h.trim().toLowerCase().replace(/["']/g, '')
+  );
+  const dataRows = lines
+    .slice(1)
+    .filter((line) => line.trim())
+    .map((line) => parseDelimitedLine(line, delimiter));
+
+  return buildContactRows(headerCells, dataRows);
+}
+
+/**
+ * Build parsed contact rows from an already-split header + data grid.
+ * Shared by the CSV text path above and the Excel path
+ * (parse-contact-excel.ts), which gets cells directly from the
+ * worksheet — no delimiter guessing needed there since Excel already
+ * hands over real cell boundaries.
+ */
+export function buildContactRows(
+  headerCells: string[],
+  dataRows: string[][]
+): ParseContactCsvResult {
+  const headers = headerCells.map((h) => h.trim().toLowerCase().replace(/["']/g, ''));
 
   const phoneIdx = headers.indexOf('phone');
   if (phoneIdx === -1) {
@@ -61,11 +125,7 @@ export function parseContactCsv(text: string): ParseContactCsvResult {
 
   const rows: ParsedContactRow[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    const values = parseCsvLine(line);
+  for (const values of dataRows) {
     const phone = values[phoneIdx]?.replace(/["']/g, '').trim();
     if (!phone) continue;
 
@@ -95,8 +155,8 @@ export function parseContactCsv(text: string): ParseContactCsvResult {
   };
 }
 
-/** Simple CSV line parse (handles quoted fields). */
-function parseCsvLine(line: string): string[] {
+/** CSV-style line parse (handles quoted fields) for an arbitrary delimiter. */
+function parseDelimitedLine(line: string, delimiter: string): string[] {
   const values: string[] = [];
   let current = '';
   let inQuotes = false;
@@ -104,7 +164,7 @@ function parseCsvLine(line: string): string[] {
   for (const char of line) {
     if (char === '"') {
       inQuotes = !inQuotes;
-    } else if (char === ',' && !inQuotes) {
+    } else if (char === delimiter && !inQuotes) {
       values.push(current.trim());
       current = '';
     } else {

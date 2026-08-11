@@ -13,6 +13,10 @@ import {
   type ParsedContactRow,
 } from '@/lib/contacts/parse-contact-csv';
 import {
+  parseContactExcelFile,
+  isExcelFilename,
+} from '@/lib/contacts/parse-contact-excel';
+import {
   assignImportedContactTags,
   resolveImportTagIds,
   type ContactTagAssignment,
@@ -138,6 +142,7 @@ export function ImportModal({
   const [tagColorByKey, setTagColorByKey] = useState<Map<string, string>>(
     new Map()
   );
+  const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{
     imported: number;
@@ -153,6 +158,7 @@ export function ImportModal({
     setHasCompanyColumn(false);
     setTagColorByKey(new Map());
     setResult(null);
+    setParsing(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -167,13 +173,34 @@ export function ImportModal({
 
     setFile(selected);
     setResult(null);
+    setParsing(true);
 
-    const text = await selected.text();
+    let parsed: {
+      rows: ParsedContactRow[];
+      hasTagsColumn: boolean;
+      hasCompanyColumn: boolean;
+    };
+    try {
+      parsed = isExcelFilename(selected.name)
+        ? await parseContactExcelFile(selected)
+        : parseContactCsv(await selected.text());
+    } catch (err) {
+      console.error('Failed to parse import file:', err);
+      toast.error(t('toastParseError'));
+      setParsedRows([]);
+      setHasTagsColumn(false);
+      setHasCompanyColumn(false);
+      setTagColorByKey(new Map());
+      setParsing(false);
+      return;
+    }
+    setParsing(false);
+
     const {
       rows,
       hasTagsColumn: csvHasTags,
       hasCompanyColumn: csvHasCompany,
-    } = parseContactCsv(text);
+    } = parsed;
 
     if (rows.length === 0) {
       toast.error(t('toastNoValidRows'));
@@ -429,7 +456,11 @@ export function ImportModal({
             {file ? (
               <>
                 <div className="bg-primary/15 ring-primary/25 flex size-10 items-center justify-center rounded-lg ring-1">
-                  <FileText className="text-primary size-5" />
+                  {parsing ? (
+                    <Loader2 className="text-primary size-5 animate-spin" />
+                  ) : (
+                    <FileText className="text-primary size-5" />
+                  )}
                 </div>
                 <p
                   className="max-w-full truncate px-2 text-sm font-medium text-popover-foreground"
@@ -438,7 +469,7 @@ export function ImportModal({
                   {truncateFilename(file.name)}
                 </p>
                 <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                  {t('rowsReady', { count: parsedRows.length })}
+                  {parsing ? t('parsing') : t('rowsReady', { count: parsedRows.length })}
                 </span>
               </>
             ) : (
@@ -459,7 +490,7 @@ export function ImportModal({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             onChange={handleFileChange}
             className="hidden"
           />
@@ -609,7 +640,7 @@ export function ImportModal({
           {!result && (
             <Button
               type="button"
-              disabled={parsedRows.length === 0 || importing}
+              disabled={parsedRows.length === 0 || importing || parsing}
               onClick={handleImport}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
