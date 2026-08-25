@@ -147,6 +147,11 @@ export const RATE_LIMITS = {
    *  while still bounding accidental abuse from a script run in a
    *  loop or a compromised admin session spamming role flips. */
   adminAction: { limit: 30, windowMs: 60_000 },
+  /** "Connect with Meta" OAuth start, per user. 10/min — a human
+   *  clicking a connect button a handful of times while sorting out
+   *  which client/product to link, not something legitimately hit in
+   *  a loop. */
+  metaOauthStart: { limit: 10, windowMs: 60_000 },
   /** Public REST API (`/api/v1/*`), keyed per API key. 120/min ≈ 2
    *  req/s sustained — comfortable for a polling integration or an
    *  automation firing on inbound events, while bounding a runaway

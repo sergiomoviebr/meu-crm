@@ -20,11 +20,34 @@
     "inbox": "Caixa de entrada",
     "notifications": "Notificações",
     "contacts": "Contatos",
+    "tasks": "Tarefas e agenda",
     "pipelines": "Funis",
     "broadcasts": "Transmissões",
     "automations": "Automações",
     "flows": "Fluxos",
     "aiAgents": "Agentes de IA",
+    "contentSocial": "Conteúdo",
+    "contentDashboard": "Dashboard de Conteúdo",
+    "contentSwipeFile": "Swipe File",
+    "contentIdeas": "Inbox de Ideias",
+    "contentProduction": "Produção",
+    "contentCreate": "Criar Conteúdo",
+    "contentCalendar": "Calendário Editorial",
+    "contentScheduled": "Agendamentos",
+    "contentPublished": "Publicações",
+    "contentDrafts": "Rascunhos",
+    "contentSocialProfiles": "Redes Sociais",
+    "contentClients": "Clientes/Perfis",
+    "trafficPerformance": "Tráfego & Performance",
+    "trafficDashboard": "Dashboard de Tráfego",
+    "trafficAccounts": "Contas de Anúncio",
+    "trafficMetrics": "Métricas",
+    "trafficLandingPages": "Landing Pages",
+    "trafficDiagnostics": "Diagnóstico IA",
+    "trafficRecommendations": "Recomendações IA",
+    "trafficAlerts": "Alertas",
+    "trafficOptimizationPlan": "Plano de Otimização",
+    "trafficReports": "Relatórios",
     "settings": "Configurações",
     "beta": "Beta",
     "unreadConversations": "{count} {count, plural, =1 {conversa não lida} other {conversas não lidas}}",
@@ -137,9 +160,13 @@
       "whatsappNotConnected": "O WhatsApp® não está conectado. Acesse Configurações para conectar sua conta."
     },
     "conversationList": {
+      "title": "Conversas",
+      "subtitle": "Atendimento pelo WhatsApp",
       "searchPlaceholder": "Buscar conversas...",
       "filterAll": "Todas",
       "filterUnread": "Não lidas",
+      "filterAwaitingReply": "Aguardando minha resposta",
+      "filterAwaitingCustomer": "Aguardando cliente",
       "filterOpen": "Abertas",
       "filterPending": "Pendentes",
       "filterClosed": "Fechadas",
@@ -151,7 +178,33 @@
       "clearAll": "Limpar tudo",
       "noConversations": "Nenhuma conversa encontrada",
       "noMessagesYet": "Ainda não há mensagens",
-      "unknown": "Desconhecido"
+      "unknown": "Desconhecido",
+      "personalChannel": "Conectado via WhatsApp pessoal"
+    },
+    "newConversation": {
+      "trigger": "Nova",
+      "title": "Abrir nova conversa",
+      "description": "Escolha um contato ou informe um telefone e selecione qual WhatsApp fará o atendimento.",
+      "recipient": "Contato ou telefone",
+      "searchPlaceholder": "Buscar nome, empresa ou +55 11 99999-9999",
+      "usePhone": "Conversar com {phone}",
+      "noResults": "Nenhum contato encontrado. Informe o número completo para criar um.",
+      "noContacts": "Nenhum contato cadastrado ainda.",
+      "nameLabel": "Nome do novo contato (opcional)",
+      "namePlaceholder": "Como deseja identificar este contato?",
+      "channel": "Enviar por",
+      "loadingChannels": "Carregando números conectados…",
+      "noChannels": "Nenhum WhatsApp está conectado para iniciar a conversa.",
+      "openSettings": "Conectar em Configurações",
+      "official": "API oficial",
+      "personal": "WhatsApp pessoal",
+      "cancel": "Cancelar",
+      "open": "Abrir conversa",
+      "opening": "Abrindo…",
+      "opened": "Conversa aberta",
+      "loadFailed": "Não foi possível carregar os dados da nova conversa.",
+      "openFailed": "Não foi possível abrir a conversa.",
+      "gateReason": "iniciar conversas"
     },
     "messageThread": {
       "backToConversations": "Voltar para as conversas",
@@ -183,7 +236,23 @@
       "aiSummaryNotConfigured": "A IA ainda não está configurada — ative em Configurações → Assistente de IA.",
       "aiSummaryFailed": "Não foi possível resumir esta conversa.",
       "aiSummarySaveFailed": "Não foi possível salvar o resumo como nota.",
-      "aiSummarySaved": "Resumo salvo como nota."
+      "aiSummarySaved": "Resumo salvo como nota.",
+      "deleteConversation": "Excluir conversa",
+      "searchMessages": "Pesquisar nesta conversa",
+      "searchMessagesPlaceholder": "Pesquisar mensagens desta conversa...",
+      "searchResults": "{count} resultado(s)",
+      "closeSearch": "Fechar pesquisa",
+      "noSearchResults": "Nenhuma mensagem encontrada nesta conversa.",
+      "deleteConversationGateReason": "excluir conversas",
+      "deleteConversationConfirm": "Excluir esta conversa e todas as suas mensagens? Essa ação não pode ser desfeita.",
+      "conversationDeleted": "Conversa excluída",
+      "editMessage": "Editar mensagem",
+      "editMessageHint": "No WhatsApp pessoal, isso tenta corrigir a mensagem para o cliente também (dentro da janela de edição do WhatsApp). Na API oficial, corrige apenas o registro aqui no CRM — o cliente já recebeu o texto original.",
+      "editCancel": "Cancelar",
+      "editSave": "Salvar",
+      "editFailed": "Não foi possível editar a mensagem",
+      "editedOnWhatsapp": "Mensagem editada no WhatsApp",
+      "editedLocalOnly": "Corrigido apenas aqui no CRM — o cliente já recebeu o texto original"
     },
     "sessionTimer": {
       "expired": "Expirado",
@@ -193,7 +262,11 @@
     },
     "composer": {
       "draftHint": "Toque em ✨ para gerar uma resposta com IA — você pode editá-la antes de enviar",
-      "sessionExpiredHint": "A sessão de 24 horas expirou. Use um modelo para retomar o contato.",
+      "sessionExpiredHint": "O WhatsApp exige uma mensagem aprovada para continuar este atendimento.",
+      "continueConversation": "Continuar conversa",
+      "approvedTemplateRequired": "O WhatsApp exige uma mensagem aprovada para reabrir o atendimento.",
+      "selectApprovedMessage": "Selecionar mensagem",
+      "continueConversationPlaceholder": "Selecione uma mensagem aprovada para continuar",
       "templates": "Modelos",
       "readOnlyPlaceholder": "Somente leitura — visualizadores podem navegar, mas não responder",
       "sessionExpiredPlaceholder": "Sessão expirada - use um modelo",
@@ -247,7 +320,8 @@
       "downloadFailed": "Não foi possível baixar o anexo",
       "viewImage": "Ver imagem",
       "expandVideo": "Expandir vídeo",
-      "imageAlt": "Imagem compartilhada"
+      "imageAlt": "Imagem compartilhada",
+      "edited": "editado"
     },
     "mediaViewer": {
       "counter": "{index} de {total}",
@@ -266,6 +340,7 @@
       "reply": "Responder",
       "copyText": "Copiar texto",
       "delete": "Excluir",
+      "edit": "Editar",
       "react": "Reagir",
       "reactWith": "Reagir com {emoji}",
       "nothingToCopy": "Nada para copiar",
@@ -405,6 +480,8 @@
         "notes": "Notas",
         "custom": "Campos personalizados",
         "deals": "Negócios",
+        "content": "Conteúdo",
+        "traffic": "Tráfego",
         "tags": "Tags",
         "noTags": "Nenhuma tag",
         "noDeals": "Nenhum negócio",
@@ -439,6 +516,31 @@
       },
       "dealsTab": {
         "noDeals": "Ainda não há negócios"
+      },
+      "contentTab": {
+        "socialProfiles": "Perfis de redes sociais",
+        "noProfiles": "Nenhum perfil vinculado",
+        "recentPosts": "Conteúdos recentes",
+        "noPosts": "Nenhum conteúdo ainda",
+        "noCaption": "Sem legenda",
+        "status": {
+          "draft": "Rascunho",
+          "pending_approval": "Em aprovação",
+          "approved": "Aprovado",
+          "scheduled": "Agendado",
+          "publishing": "Publicando",
+          "published": "Publicado",
+          "failed": "Falha",
+          "cancelled": "Cancelado"
+        }
+      },
+      "trafficTab": {
+        "adAccounts": "Contas de anúncio",
+        "noAdAccounts": "Nenhuma conta de anúncio vinculada",
+        "recentRecommendations": "Recomendações recentes da IA",
+        "noRecommendations": "Nenhuma recomendação ainda",
+        "history": "Histórico de otimização",
+        "noHistory": "Nenhum evento registrado ainda"
       },
       "tagsTab": {
         "clickTagDesc": "Clique em uma tag para adicioná-la ou removê-la deste contato.",
@@ -711,6 +813,7 @@
       "title": "Nova transmissão",
       "subtitle": "Crie e envie uma mensagem de transmissão para seus contatos.",
       "steps": {
+        "sales_qualify": "Qualificar resposta de vendas",
         "template": "Modelo",
         "audience": "Público",
         "personalize": "Personalizar",
@@ -1025,7 +1128,8 @@
         "matchWord": "Palavra inteira",
         "matchWordHint": "Corresponde à palavra-chave apenas como uma palavra isolada, então \"k\" não é mais acionado por \"thanks\". Ideal para palavras-chave curtas em idiomas separados por espaços; use Contém para idiomas escritos sem espaços.",
         "matchExact": "Exato",
-        "closeConversationHint": "Define o status da conversa como \"fechada\". Nenhuma configuração necessária."
+        "closeConversationHint": "Define o status da conversa como \"fechada\". Nenhuma configuração necessária.",
+        "salesQualifyHint": "Analisa a resposta do lead, atualiza intenção, pontuação e temperatura e cria uma resposta sugerida. Nunca envia mensagem automaticamente."
       }
     }
   },
@@ -1283,6 +1387,7 @@
       "unnamed": "Sem nome",
       "joined": "Entrou em {date}",
       "remove": "Remover",
+      "newQr": "Gerar novo QR",
       "removedToast": "{name} removido",
       "updatedToast": "{name} atualizado para {role}",
       "pendingInvitations": "Convites pendentes",
@@ -1481,6 +1586,15 @@
       "notConnected": "Não conectado",
       "connectedDesc": "Seu token de acesso autentica com a Meta. Veja o status de registro abaixo para saber se os webhooks estão realmente conectados.",
       "notConnectedDesc": "Configure suas credenciais da API da Meta abaixo para conectar sua conta do WhatsApp Business.",
+      "embeddedSignupTitle": "Conectar com a Meta",
+      "embeddedSignupDescription": "Um clique — conecte seu WhatsApp Business sem precisar copiar IDs ou tokens à mão.",
+      "embeddedSignupConnect": "Conectar com a Meta",
+      "embeddedSignupConnecting": "Conectando...",
+      "embeddedSignupNotConfigured": "Conexão com um clique ainda não configurada neste servidor.",
+      "embeddedSignupCancelled": "Conexão cancelada",
+      "embeddedSignupMissingWaba": "A Meta não retornou os dados da conta — tente novamente.",
+      "embeddedSignupFailed": "Falha ao conectar com a Meta",
+      "embeddedSignupSuccess": "WhatsApp conectado com sucesso",
       "registered": "Registrado — a Meta enviará eventos para o wacrm",
       "notRegistered": "Não registrado — a Meta não enviará eventos",
       "verifyWithMeta": "Verificar com a Meta",
@@ -1537,12 +1651,55 @@
       "step4_5": "Inscreva-se no campo de webhook \"messages\"",
       "metaDocs": "Documentação da API do WhatsApp da Meta"
     },
+    "whatsappPersonal": {
+      "multiDescription": "Conecte e gerencie vários números de WhatsApp. Cada conversa permanece vinculada ao número que a recebeu.",
+      "connectionsTitle": "Números conectados",
+      "connectionsDescription": "Cada número possui QR code, sessão e histórico independentes.",
+      "addConnection": "Adicionar WhatsApp",
+      "defaultBadge": "Principal",
+      "emptyTitle": "Nenhum WhatsApp conectado",
+      "emptyDescription": "Adicione o primeiro número para gerar um QR code.",
+      "remove": "Remover",
+      "title": "WhatsApp pessoal (QR code)",
+      "description": "Conecte seu WhatsApp pessoal escaneando um QR code, como no WhatsApp Web, para ver essas conversas aqui no Inbox.",
+      "riskTitle": "Isto não é a API oficial do WhatsApp Business",
+      "riskDescription": "Esta conexão usa uma biblioteca não-oficial que automatiza o protocolo do WhatsApp Web. Isso viola os Termos de Serviço do WhatsApp e coloca seu número em risco real de banimento. Conecte por sua conta e risco.",
+      "connect": "Conectar",
+      "connecting": "Conectando...",
+      "disconnect": "Desconectar",
+      "disconnecting": "Desconectando...",
+      "connectedTitle": "Conectado",
+      "disconnectedTitle": "Não conectado",
+      "disconnectedDesc": "Clique em Conectar para gerar um QR code e escanear com o app do WhatsApp no seu celular.",
+      "qrAlt": "QR code para conectar o WhatsApp pessoal",
+      "scanHint": "Abra o WhatsApp no celular → Configurações → Aparelhos conectados → Conectar um aparelho, e escaneie este código.",
+      "gateReason": "gerenciar o WhatsApp pessoal",
+      "importHistory": "Importar conversas",
+      "historyNeedsReconnect": "Para trazer as conversas que já existiam no celular, importe o histórico com um novo QR code.",
+      "historyPending": "Aguardando o celular iniciar a sincronização…",
+      "historySyncing": "Importando conversas e mensagens…",
+      "historyCompleted": "Histórico sincronizado: {chats} conversas e {messages} mensagens importadas.",
+      "historyPaused": "A sincronização foi pausada pelo WhatsApp. Você pode tentar novamente.",
+      "clientLabel": "Cliente de tráfego pago",
+      "clientPlaceholder": "Nenhum cliente vinculado",
+      "clientHint": "Leads que chegarem por este número serão atribuídos a este cliente quando o anúncio de origem não puder ser identificado.",
+      "toasts": {
+        "connectFailed": "Não foi possível iniciar a conexão",
+        "disconnectFailed": "Não foi possível desconectar",
+        "disconnected": "WhatsApp pessoal desconectado",
+        "removeFailed": "Não foi possível remover a conexão",
+        "removed": "Conexão removida",
+        "clientLinked": "Cliente vinculado à conexão",
+        "clientLinkFailed": "Não foi possível vincular o cliente"
+      }
+    },
     "sections": {
       "overview": "Visão geral",
       "profile": "Seu perfil",
       "security": "Login e segurança",
       "appearance": "Aparência",
       "whatsapp": "WhatsApp",
+      "whatsapp-personal": "WhatsApp pessoal",
       "templates": "Modelos",
       "quick-replies": "Respostas rápidas",
       "fields": "Campos e tags",
@@ -1734,6 +1891,539 @@
       "reindex": "Reindexar",
       "reindexTooltip": "Regerar embeddings de todos os documentos (por exemplo, depois de adicionar uma chave de embeddings)",
       "loading": "Carregando…"
+    }
+  },
+  "Content": {
+    "dashboard": {
+      "title": "Dashboard de Conteúdo",
+      "subtitle": "Visão geral das publicações de todos os clientes",
+      "newPost": "Novo conteúdo",
+      "tiles": {
+        "draft": "Rascunhos",
+        "scheduled": "Agendados",
+        "publishedThisMonth": "Publicados este mês",
+        "failed": "Com falha"
+      },
+      "chart": {
+        "title": "Conteúdos por status",
+        "category": "Quantidade"
+      },
+      "statusShort": {
+        "draft": "Rascunho",
+        "pending_approval": "Em aprovação",
+        "approved": "Aprovado",
+        "scheduled": "Agendado",
+        "publishing": "Publicando",
+        "published": "Publicado",
+        "failed": "Falha",
+        "cancelled": "Cancelado"
+      }
+    },
+    "form": {
+      "createTitle": "Criar conteúdo",
+      "editTitle": "Editar conteúdo",
+      "subtitle": "Crie uma publicação e selecione o cliente, as redes e o agendamento.",
+      "client": "Cliente",
+      "clientPlaceholder": "Selecione um cliente",
+      "targetProfiles": "Redes de destino",
+      "noProfiles": "Este cliente ainda não tem perfis de redes sociais vinculados.",
+      "contentType": "Tipo de conteúdo",
+      "contentTypes": {
+        "image": "Imagem",
+        "video": "Vídeo",
+        "carousel": "Carrossel",
+        "text": "Texto",
+        "story": "Story",
+        "reel": "Reel"
+      },
+      "caption": "Legenda",
+      "hashtags": "Hashtags",
+      "media": "Imagens e vídeos",
+      "linkUrl": "Link",
+      "cta": "Chamada para ação (CTA)",
+      "ctaPlaceholder": "ex.: Saiba mais",
+      "scheduleAt": "Agendar para",
+      "actions": {
+        "saveDraft": "Salvar rascunho",
+        "submitForApproval": "Enviar para aprovação",
+        "schedule": "Agendar",
+        "publishNow": "Publicar agora"
+      },
+      "errors": {
+        "missingClient": "Selecione um cliente",
+        "missingProfiles": "Selecione ao menos uma rede de destino",
+        "missingSchedule": "Escolha uma data e horário para agendar",
+        "saveFailed": "Falha ao salvar o conteúdo",
+        "actionFailed": "Falha ao executar a ação",
+        "fileTooLarge": "Arquivo muito grande: {name}",
+        "uploadFailed": "Falha ao enviar o arquivo"
+      },
+      "toasts": {
+        "savedDraft": "Rascunho salvo",
+        "submitted": "Enviado para aprovação",
+        "scheduled": "Conteúdo agendado",
+        "publishing": "Publicação iniciada"
+      }
+    },
+    "posts": {
+      "title": "Publicações",
+      "subtitle": "Gerencie rascunhos, aprovações, agendamentos e publicações",
+      "new": "Novo conteúdo",
+      "gateReason": "gerenciar conteúdo",
+      "empty": "Nenhum conteúdo neste status.",
+      "noCaption": "Sem legenda",
+      "columns": {
+        "client": "Cliente",
+        "caption": "Legenda",
+        "status": "Status",
+        "updated": "Atualizado"
+      },
+      "status": {
+        "draft": "Rascunho",
+        "pending_approval": "Em aprovação",
+        "approved": "Aprovado",
+        "scheduled": "Agendado",
+        "publishing": "Publicando",
+        "published": "Publicado",
+        "failed": "Falha",
+        "cancelled": "Cancelado"
+      },
+      "actions": {
+        "publishNow": "Publicar agora"
+      },
+      "toasts": {
+        "actionFailed": "Falha ao executar a ação",
+        "duplicated": "Conteúdo duplicado",
+        "approved": "Conteúdo aprovado",
+        "publishing": "Publicação iniciada",
+        "cancelled": "Conteúdo cancelado"
+      }
+    },
+    "calendar": {
+      "title": "Calendário Editorial",
+      "subtitle": "Visualize as publicações por dia, semana ou mês",
+      "newPost": "Novo conteúdo",
+      "today": "Hoje",
+      "views": {
+        "day": "Dia",
+        "week": "Semana",
+        "month": "Mês"
+      },
+      "moreCount": "+{count} {count, plural, =1 {publicação} other {publicações}}",
+      "untitled": "Sem título",
+      "noPostsThisDay": "Nenhuma publicação neste dia.",
+      "status": {
+        "draft": "Rascunho",
+        "pending_approval": "Em aprovação",
+        "approved": "Aprovado",
+        "scheduled": "Agendado",
+        "publishing": "Publicando",
+        "published": "Publicado",
+        "failed": "Falha",
+        "cancelled": "Cancelado"
+      }
+    },
+    "socialProfiles": {
+      "title": "Redes Sociais",
+      "subtitle": "Perfis de redes sociais vinculados aos clientes cadastrados",
+      "new": "Novo perfil",
+      "gateReason": "gerenciar redes sociais",
+      "groupByPlatform": "Agrupar por rede",
+      "groupByClient": "Agrupar por cliente",
+      "empty": "Nenhum perfil cadastrado ainda.",
+      "unknownClient": "Cliente desconhecido",
+      "columns": {
+        "client": "Cliente",
+        "platform": "Rede",
+        "handle": "Usuário/página",
+        "status": "Status"
+      },
+      "connectionStatus": {
+        "not_connected": "Não conectado",
+        "connected": "Conectado",
+        "error": "Erro"
+      },
+      "dialog": {
+        "title": "Novo perfil de rede social",
+        "description": "Vincule um perfil de rede social a um cliente já cadastrado.",
+        "client": "Cliente",
+        "clientPlaceholder": "Selecione um cliente",
+        "platform": "Rede",
+        "handle": "Usuário/página",
+        "displayName": "Nome de exibição",
+        "cancel": "Cancelar",
+        "save": "Salvar",
+        "connectWithMeta": "Conectar com a Meta",
+        "connectWithMetaHint": "Um clique — escolha entre suas Páginas/contas do Instagram, sem precisar digitar nada.",
+        "connectWithMetaNeedsClient": "Selecione um cliente acima para conectar com a Meta."
+      },
+      "deleteDialog": {
+        "title": "Remover perfil",
+        "description": "Tem certeza que deseja remover este perfil de rede social? Conteúdos já publicados não serão afetados.",
+        "confirm": "Remover"
+      },
+      "toasts": {
+        "missingFields": "Preencha o cliente e o usuário/página",
+        "createError": "Falha ao criar o perfil",
+        "created": "Perfil criado",
+        "deleteError": "Falha ao remover o perfil",
+        "deleted": "Perfil removido",
+        "oauthConnected": "Conectado com a Meta com sucesso",
+        "oauthNoPages": "Nenhuma Página do Facebook encontrada nessa conta da Meta",
+        "oauthDenied": "Conexão cancelada",
+        "oauthError": "Falha ao conectar com a Meta"
+      }
+    }
+  },
+  "MetaOAuth": {
+    "picker": {
+      "title": "Escolha uma conta",
+      "description": "Encontramos mais de uma opção na sua conta da Meta. Escolha qual conectar.",
+      "empty": "Nenhuma opção encontrada.",
+      "loadFailed": "Não foi possível carregar as opções",
+      "finalizeFailed": "Não foi possível concluir a conexão",
+      "connected": "Conectado com sucesso"
+    }
+  },
+  "Traffic": {
+    "dashboard": {
+      "title": "Tráfego & Performance",
+      "subtitle": "Visão geral e diagnóstico rápido de todos os clientes",
+      "gateReason": "gerenciar tráfego",
+      "runDiagnostics": "Rodar diagnóstico",
+      "running": "Analisando…",
+      "tiles": {
+        "spend": "Investimento (7d)",
+        "leads": "Leads (7d)",
+        "clicks": "Cliques (7d)",
+        "impressions": "Impressões (7d)"
+      },
+      "clientsMonitored": "{count} {count, plural, =1 {cliente monitorado} other {clientes monitorados}}",
+      "healthy": "Saudáveis",
+      "attention": "Precisam de atenção",
+      "critical": "Precisam de intervenção",
+      "topProblems": "Principais problemas encontrados hoje",
+      "noProblems": "Nenhum problema novo identificado.",
+      "toasts": {
+        "runFailed": "Falha ao rodar o diagnóstico",
+        "runComplete": "Diagnóstico concluído: {count} recomendação(ões) gerada(s)"
+      }
+    },
+    "diagnostics": {
+      "title": "Diagnóstico IA",
+      "subtitle": "O briefing diário do seu Copiloto de Performance",
+      "gateReason": "gerenciar tráfego",
+      "runDiagnostics": "Rodar diagnóstico",
+      "running": "Analisando…",
+      "filters": {
+        "client": "Cliente",
+        "allClients": "Todos os clientes"
+      },
+      "briefing": "Analisei os dados das últimas 24 horas. Existem {count} ponto(s) que precisam da sua atenção.",
+      "critical": "{count} crítico(s)",
+      "highPriority": "{count} de alta prioridade",
+      "opportunities": "{count} oportunidade(s)",
+      "mainRecommendation": "Principal recomendação de hoje",
+      "actions": {
+        "createCreative": "Criar novos criativos",
+        "viewFull": "Ver diagnóstico completo"
+      },
+      "category": {
+        "creative_fatigue": "Fadiga criativa",
+        "landing_page": "Landing page",
+        "funnel": "Funil",
+        "budget": "Orçamento",
+        "alert": "Alerta"
+      },
+      "toasts": {
+        "runFailed": "Falha ao rodar o diagnóstico",
+        "runComplete": "Diagnóstico concluído: {count} recomendação(ões) gerada(s)"
+      }
+    },
+    "recommendations": {
+      "title": "Recomendações IA",
+      "subtitle": "Todas as recomendações geradas pelo Copiloto de Performance",
+      "alertsTitle": "Alertas",
+      "alertsSubtitle": "Problemas críticos e de alta prioridade que ainda não foram vistos",
+      "gateReason": "gerenciar tráfego",
+      "filters": {
+        "client": "Cliente",
+        "allClients": "Todos os clientes",
+        "status": "Status",
+        "allStatuses": "Todos os status"
+      },
+      "empty": "Nenhuma recomendação encontrada.",
+      "recommendedAction": "Ação recomendada",
+      "expectedImpact": "Impacto esperado",
+      "priority": {
+        "critical": "Crítico",
+        "high": "Alta prioridade",
+        "medium": "Média prioridade",
+        "low": "Baixa prioridade"
+      },
+      "category": {
+        "creative_fatigue": "Fadiga criativa",
+        "landing_page": "Landing page",
+        "funnel": "Funil",
+        "budget": "Orçamento",
+        "alert": "Alerta"
+      },
+      "status": {
+        "new": "Nova",
+        "in_review": "Em análise",
+        "approved": "Aprovada",
+        "in_progress": "Em execução",
+        "done": "Concluída",
+        "dismissed": "Ignorada"
+      },
+      "actions": {
+        "review": "Colocar em análise",
+        "approve": "Aprovar",
+        "start": "Iniciar execução",
+        "complete": "Concluir",
+        "dismiss": "Ignorar",
+        "createCreative": "Criar novo criativo",
+        "addToPlan": "Adicionar ao plano de otimização"
+      },
+      "toasts": {
+        "actionFailed": "Falha ao executar a ação",
+        "updated": "Recomendação atualizada",
+        "addedToPlan": "Adicionada ao plano de otimização"
+      }
+    },
+    "accounts": {
+      "title": "Contas de Anúncio",
+      "subtitle": "Contas de tráfego pago vinculadas aos clientes cadastrados",
+      "gateReason": "gerenciar tráfego",
+      "new": "Nova conta",
+      "empty": "Nenhuma conta de anúncio cadastrada ainda.",
+      "columns": {
+        "client": "Cliente",
+        "platform": "Plataforma",
+        "name": "Nome",
+        "status": "Status"
+      },
+      "connectionStatus": {
+        "not_connected": "Não conectada",
+        "connected": "Conectada",
+        "error": "Erro"
+      },
+      "dialog": {
+        "title": "Nova conta de anúncio",
+        "description": "Vincule uma conta de anúncio a um cliente já cadastrado.",
+        "client": "Cliente",
+        "clientPlaceholder": "Selecione um cliente",
+        "platform": "Plataforma",
+        "name": "Nome da conta",
+        "namePlaceholder": "ex.: Meta Ads — Clínica Exemplo",
+        "cancel": "Cancelar",
+        "save": "Salvar",
+        "connectWithMeta": "Conectar com a Meta",
+        "connectWithMetaHint": "Um clique — escolha entre suas contas de anúncio, sem precisar digitar nada.",
+        "connectWithMetaNeedsClient": "Selecione um cliente acima para conectar com a Meta."
+      },
+      "deleteDialog": {
+        "title": "Remover conta de anúncio",
+        "description": "Tem certeza que deseja remover esta conta? Campanhas e métricas associadas também serão removidas.",
+        "confirm": "Remover"
+      },
+      "toasts": {
+        "missingFields": "Preencha o cliente e o nome da conta",
+        "createError": "Falha ao criar a conta",
+        "created": "Conta criada",
+        "deleteError": "Falha ao remover a conta",
+        "deleted": "Conta removida",
+        "oauthConnected": "Conectado com a Meta com sucesso",
+        "oauthNoAdAccounts": "Nenhuma conta de anúncio encontrada nessa conta da Meta",
+        "oauthDenied": "Conexão cancelada",
+        "oauthError": "Falha ao conectar com a Meta"
+      },
+      "detail": {
+        "gateReason": "gerenciar tráfego",
+        "newCampaign": "Nova campanha",
+        "empty": "Nenhuma campanha cadastrada ainda.",
+        "notFound": "Conta de anúncio não encontrada.",
+        "columns": {
+          "name": "Nome",
+          "objective": "Objetivo",
+          "status": "Status",
+          "budget": "Orçamento"
+        },
+        "dialog": {
+          "title": "Nova campanha",
+          "description": "Cadastre uma campanha desta conta de anúncio.",
+          "name": "Nome",
+          "objective": "Objetivo",
+          "objectivePlaceholder": "ex.: Geração de leads",
+          "budget": "Orçamento diário",
+          "cancel": "Cancelar",
+          "save": "Salvar"
+        },
+        "toasts": {
+          "missingFields": "Preencha o nome da campanha",
+          "createError": "Falha ao criar a campanha",
+          "created": "Campanha criada"
+        }
+      }
+    },
+    "campaigns": {
+      "detail": {
+        "gateReason": "gerenciar tráfego",
+        "newAdSet": "Novo conjunto",
+        "newAd": "Novo anúncio",
+        "emptySets": "Nenhum conjunto de anúncios cadastrado ainda.",
+        "emptyAds": "Nenhum anúncio neste conjunto ainda.",
+        "notFound": "Campanha não encontrada.",
+        "columns": {
+          "name": "Nome",
+          "status": "Status",
+          "fatigue": "Fadiga"
+        },
+        "fatigueLevel": {
+          "healthy": "Saudável",
+          "monitor": "Monitorar",
+          "test": "Precisa de teste",
+          "replace": "Precisa ser substituído"
+        },
+        "setDialog": {
+          "title": "Novo conjunto de anúncios",
+          "description": "Cadastre um conjunto de anúncios desta campanha.",
+          "name": "Nome"
+        },
+        "adDialog": {
+          "title": "Novo anúncio",
+          "description": "Cadastre um anúncio/criativo deste conjunto.",
+          "name": "Nome",
+          "headline": "Título/gancho",
+          "launchedAt": "Data de início"
+        },
+        "cancel": "Cancelar",
+        "save": "Salvar",
+        "toasts": {
+          "createError": "Falha ao criar",
+          "setCreated": "Conjunto criado",
+          "adCreated": "Anúncio criado"
+        }
+      }
+    },
+    "metrics": {
+      "title": "Métricas",
+      "subtitle": "Lançamento manual e importação em massa de métricas de campanha",
+      "gateReason": "gerenciar tráfego",
+      "manualEntry": "Lançamento manual",
+      "fields": {
+        "entityType": "Tipo de entidade",
+        "entity": "Entidade",
+        "entityPlaceholder": "Selecione",
+        "date": "Data",
+        "impressions": "Impressões",
+        "reach": "Alcance",
+        "clicks": "Cliques",
+        "spend": "Investimento",
+        "leads": "Leads",
+        "conversions": "Conversões",
+        "revenue": "Receita",
+        "visits": "Visitas"
+      },
+      "entityTypes": {
+        "ad_account": "Conta de anúncio",
+        "campaign": "Campanha",
+        "ad_set": "Conjunto de anúncios",
+        "ad": "Anúncio",
+        "landing_page": "Landing page"
+      },
+      "save": "Salvar métricas",
+      "csvImport": "Importação em massa (CSV)",
+      "csvHint": "Colunas esperadas: entity_type, entity_external_id_or_name, date, impressions, reach, clicks, spend, leads, conversions, revenue, visits.",
+      "import": "Importar",
+      "importSummary": "{imported} linha(s) importada(s), {errors} erro(s)",
+      "lineError": "Linha {line}",
+      "toasts": {
+        "missingFields": "Selecione a entidade e a data",
+        "saveError": "Falha ao salvar as métricas",
+        "saved": "Métricas salvas",
+        "importError": "Falha ao importar o arquivo",
+        "imported": "{count} linha(s) importada(s)"
+      }
+    },
+    "landingPages": {
+      "title": "Landing Pages",
+      "subtitle": "Páginas de destino usadas nas campanhas dos clientes",
+      "gateReason": "gerenciar tráfego",
+      "new": "Nova landing page",
+      "empty": "Nenhuma landing page cadastrada ainda.",
+      "columns": {
+        "client": "Cliente",
+        "name": "Nome",
+        "url": "URL"
+      },
+      "dialog": {
+        "title": "Nova landing page",
+        "description": "Vincule uma landing page a um cliente já cadastrado.",
+        "client": "Cliente",
+        "clientPlaceholder": "Selecione um cliente",
+        "name": "Nome",
+        "url": "URL",
+        "notes": "Observações",
+        "cancel": "Cancelar",
+        "save": "Salvar"
+      },
+      "deleteDialog": {
+        "title": "Remover landing page",
+        "description": "Tem certeza que deseja remover esta landing page?",
+        "confirm": "Remover"
+      },
+      "toasts": {
+        "missingFields": "Preencha o cliente, nome e URL",
+        "createError": "Falha ao criar a landing page",
+        "created": "Landing page criada",
+        "deleteError": "Falha ao remover a landing page",
+        "deleted": "Landing page removida"
+      }
+    },
+    "optimizationPlan": {
+      "title": "Plano de Otimização",
+      "subtitle": "Tarefas geradas a partir das recomendações da IA",
+      "gateReason": "gerenciar tráfego",
+      "status": {
+        "todo": "A fazer",
+        "in_progress": "Em execução",
+        "done": "Concluída",
+        "cancelled": "Cancelada"
+      },
+      "priority": {
+        "critical": "Crítico",
+        "high": "Alta",
+        "medium": "Média",
+        "low": "Baixa"
+      },
+      "toasts": {
+        "updateError": "Falha ao atualizar a tarefa"
+      }
+    },
+    "reports": {
+      "title": "Relatórios",
+      "subtitle": "Resumo de performance por cliente e período",
+      "selectClient": "Selecione um cliente",
+      "filters": {
+        "client": "Cliente",
+        "clientPlaceholder": "Selecione um cliente",
+        "from": "De",
+        "to": "Até"
+      },
+      "generate": "Gerar relatório",
+      "summary": "Resumo do período",
+      "stats": {
+        "spend": "Investimento",
+        "leads": "Leads",
+        "ctr": "CTR",
+        "cpl": "CPL",
+        "cpa": "CPA",
+        "roas": "ROAS",
+        "revenue": "Receita",
+        "conversions": "Conversões"
+      },
+      "funnel": "Funil comercial"
     }
   }
 }

@@ -100,7 +100,13 @@ describe('parseContactCsv', () => {
   it('auto-detects a tab-delimited file', () => {
     const csv = 'phone\tname\n+15551234567\tAlice';
     expect(parseContactCsv(csv).rows).toEqual([
-      { phone: '+15551234567', name: 'Alice', email: undefined, company: undefined, tagNames: [] },
+      {
+        phone: '+15551234567',
+        name: 'Alice',
+        email: undefined,
+        company: undefined,
+        tagNames: [],
+      },
     ]);
   });
 
@@ -114,6 +120,25 @@ describe('parseContactCsv', () => {
 
   it('defaults to comma when the header has no delimiter characters at all', () => {
     expect(detectDelimiter('phone')).toBe(',');
+  });
+
+  it('maps extended Portuguese contact fields and birthday without a year', () => {
+    const csv = `telefone;nome completo;nome preferido;cpf;whatsapp;data de nascimento;cep;cidade;estado
++5511999999999;Maria da Silva;Maria;529.982.247-25;+5511999999999;15/09;01001-000;São Paulo;SP`;
+    expect(parseContactCsv(csv).rows[0]).toEqual(
+      expect.objectContaining({
+        phone: '+5511999999999',
+        name: 'Maria da Silva',
+        preferredName: 'Maria',
+        cpf: '529.982.247-25',
+        whatsapp: '+5511999999999',
+        birthDay: 15,
+        birthMonth: 9,
+        addressZip: '01001-000',
+        addressCity: 'São Paulo',
+        addressState: 'SP',
+      })
+    );
   });
 });
 
@@ -130,8 +155,20 @@ describe('buildContactRows — shared by CSV and Excel import paths', () => {
       hasTagsColumn: false,
       hasCompanyColumn: true,
       rows: [
-        { phone: '+15551234567', name: 'Alice', email: undefined, company: 'Acme', tagNames: [] },
-        { phone: '+15559876543', name: 'Bob', email: undefined, company: undefined, tagNames: [] },
+        {
+          phone: '+15551234567',
+          name: 'Alice',
+          email: undefined,
+          company: 'Acme',
+          tagNames: [],
+        },
+        {
+          phone: '+15559876543',
+          name: 'Bob',
+          email: undefined,
+          company: undefined,
+          tagNames: [],
+        },
       ],
     });
   });

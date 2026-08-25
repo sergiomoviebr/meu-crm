@@ -158,6 +158,7 @@ export function MessageComposer({
   const [drafting, setDrafting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+
   // Interactive-message builder dialog + quick-reply picker.
   const [interactiveOpen, setInteractiveOpen] = useState(false);
   const [interactivePayload, setInteractivePayload] =
@@ -240,6 +241,23 @@ export function MessageComposer({
     el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
   }, []);
 
+  // Keep one local draft per conversation. Drafts never leave the browser,
+  // contain no provider credentials, and are removed immediately after send.
+  useEffect(() => {
+    const saved = window.localStorage.getItem(`crm:message-draft:${conversationId}`) ?? "";
+    setText(saved);
+    window.requestAnimationFrame(() => adjustHeight());
+  }, [conversationId, adjustHeight]);
+
+  useEffect(() => {
+    const key = `crm:message-draft:${conversationId}`;
+    const timer = window.setTimeout(() => {
+      if (text.trim()) window.localStorage.setItem(key, text);
+      else window.localStorage.removeItem(key);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [conversationId, text]);
+
   const handleSend = useCallback(async () => {
     const trimmed = text.trim();
     if (!trimmed || sending || sessionExpired) return;
@@ -247,6 +265,7 @@ export function MessageComposer({
     setSending(true);
     try {
       onSend(trimmed, replyTo?.id);
+      window.localStorage.removeItem(`crm:message-draft:${conversationId}`);
       setText("");
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
@@ -254,7 +273,7 @@ export function MessageComposer({
     } finally {
       setSending(false);
     }
-  }, [text, sending, sessionExpired, onSend, replyTo?.id]);
+  }, [text, sending, sessionExpired, onSend, replyTo?.id, conversationId]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -623,10 +642,8 @@ export function MessageComposer({
         </div>
       )}
       {sessionExpired && (
-        <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-500/10 px-3 py-2">
-          <p className="text-xs text-amber-400">
-            {t("sessionExpiredHint")}
-          </p>
+        <div className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+          <div><p className="text-xs font-semibold text-amber-700 dark:text-amber-300">{t("continueConversation")}</p><p className="text-[11px] text-amber-700/80 dark:text-amber-300/80">{t("approvedTemplateRequired")}</p></div>
           <Button
             variant="ghost"
             size="sm"
@@ -634,7 +651,7 @@ export function MessageComposer({
             onClick={onOpenTemplates}
           >
             <LayoutTemplate className="mr-1 h-3 w-3" />
-            {t("templates")}
+            {t("selectApprovedMessage")}
           </Button>
         </div>
       )}
@@ -815,7 +832,7 @@ export function MessageComposer({
               readOnly
                 ? t("readOnlyPlaceholder")
                 : sessionExpired
-                  ? t("sessionExpiredPlaceholder")
+                  ? t("continueConversationPlaceholder")
                   : t("typeMessagePlaceholder")
             }
             disabled={sessionExpired || readOnly}

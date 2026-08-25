@@ -26,6 +26,12 @@ export const HANDOFF_SENTINEL = '[[HANDOFF]]'
  *  bounds token spend on the caller's own key. */
 export const MAX_OUTPUT_TOKENS = 1024
 
+/** Cap for the Performance Copilot's diagnostic JSON output — a
+ *  multi-recommendation array needs far more room than a single chat
+ *  reply, so this is a separate, larger constant rather than bumping
+ *  MAX_OUTPUT_TOKENS (which would also inflate every reply/draft call). */
+export const MAX_DIAGNOSTIC_OUTPUT_TOKENS = 4096
+
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
 const DEFAULT_CONTEXT_MESSAGE_LIMIT = 20
 
@@ -88,6 +94,59 @@ export function buildSystemPrompt(args: {
           .map((k, i) => `[${i + 1}] ${k}`)
           .join('\n\n---\n\n')}`,
     )
+  }
+
+  return parts.join('\n\n')
+}
+
+/**
+ * System prompt for the Traffic & Performance module's diagnostic
+ * engine (src/lib/traffic/diagnostic.ts). Deliberately a separate
+ * function from `buildSystemPrompt` above, not a mode added to it —
+ * that one is reply/handoff-shaped (its `mode` param and
+ * HANDOFF_SENTINEL machinery don't apply here) and forcing a second
+ * concern into it would make both harder to read.
+ *
+ * The model is given pre-computed deterministic signals (CTR/CPM/CPL/
+ * CPA trends, a creative-fatigue level, funnel conversion rates — see
+ * src/lib/traffic/signals.ts) and asked only to explain and prioritize
+ * them, never to invent its own numbers or classifications.
+ */
+export function buildDiagnosticSystemPrompt(args: { businessContext?: string | null }): string {
+  const { businessContext } = args
+  const parts: string[] = [
+    'You are a paid-traffic performance analyst working inside a CRM. ' +
+      'You are given a structured summary of one client\'s ad accounts, campaigns, creatives, ' +
+      'landing pages, and commercial funnel, including metrics already computed for you ' +
+      '(CTR/CPM/CPL/CPA trends, a creative-fatigue level, funnel conversion rates). ' +
+      'Your job is to turn that into a short list of prioritized, actionable recommendations — ' +
+      'not to recompute the numbers, and not to invent metrics, entity references, or a fatigue ' +
+      'level that were not given to you.',
+    'Respond in Brazilian Portuguese (pt-BR), matching this CRM\'s locale.',
+    'Output STRICT JSON ONLY — a single JSON object, no markdown code fences, no prose before or ' +
+      'after it. Match exactly:\n' +
+      '{\n' +
+      '  "recommendations": [\n' +
+      '    {\n' +
+      '      "entity_type": "ad_account" | "campaign" | "ad_set" | "ad" | "landing_page" | "funnel",\n' +
+      '      "entity_id_ref": string | null,  // copy EXACTLY one of the [ref:...] labels given in the context, or null for a "funnel" recommendation\n' +
+      '      "category": "creative_fatigue" | "landing_page" | "funnel" | "budget" | "alert",\n' +
+      '      "priority": "critical" | "high" | "medium" | "low",\n' +
+      '      "problem": string,           // one sentence naming what is wrong\n' +
+      '      "diagnosis": string,         // why it is probably happening, citing the actual numbers given\n' +
+      '      "recommended_action": string,// concrete next step(s) the user should take\n' +
+      '      "expected_impact": string    // what should improve if the action is taken\n' +
+      '    }\n' +
+      '  ]\n' +
+      '}',
+    'Only report something worth acting on — if the data shows no real issue or opportunity, ' +
+      'return { "recommendations": [] }. Prefer fewer, higher-confidence recommendations over padding the list.',
+    'Treat every number in the context as already correct — never contradict a pre-computed trend ' +
+      'or fatigue level, only interpret and prioritize it.',
+  ]
+
+  if (businessContext && businessContext.trim()) {
+    parts.push(`Business context for this account:\n${businessContext.trim()}`)
   }
 
   return parts.join('\n\n')

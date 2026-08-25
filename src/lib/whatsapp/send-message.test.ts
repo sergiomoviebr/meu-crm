@@ -7,6 +7,11 @@ import {
   type SendMessageParams,
 } from './send-message';
 
+vi.mock('@/lib/whatsapp-personal/send', () => ({
+  createPersonalMessageId: vi.fn(() => 'wa-msg-1'),
+  sendPersonalTextMessage: vi.fn(),
+}));
+
 // A db that explodes if touched — these tests cover the param
 // validation that MUST short-circuit before any query runs.
 function noDb(): SupabaseClient {
@@ -202,5 +207,85 @@ describe('SendMessageError', () => {
     expect(e.code).toBe('meta_error');
     expect(e.status).toBe(502);
     expect(e).toBeInstanceOf(Error);
+  });
+});
+
+describe('sendMessageToConversation — whatsapp_personal channel branch', () => {
+  const conversation = {
+    id: 'cv-1',
+    channel: 'whatsapp_personal',
+    whatsapp_personal_session_id: 'session-1',
+    contact: { id: 'contact-1', phone: '+14155550123' },
+  };
+
+  function makePersonalChannelDb(): SupabaseClient {
+    let table = '';
+    let mode: 'select' | 'insert' | 'update' = 'select';
+    const builder: Record<string, unknown> = {
+      select: () => builder,
+      insert: () => {
+        mode = 'insert';
+        return builder;
+      },
+      update: () => {
+        mode = 'update';
+        return builder;
+      },
+      eq: () => builder,
+      single: () => {
+        if (table === 'conversations' && mode === 'select') {
+          return Promise.resolve({ data: conversation, error: null });
+        }
+        if (table === 'messages' && mode === 'insert') {
+          return Promise.resolve({ data: { id: 'msg-row-1' }, error: null });
+        }
+        return Promise.resolve({ data: null, error: null });
+      },
+      // Thenable: `await db.from('conversations').update().eq()` lands here.
+      then: (resolve: (v: { data: null; error: null }) => void) =>
+        resolve({ data: null, error: null }),
+    };
+    return {
+      from: (t: string) => {
+        table = t;
+        mode = 'select';
+        return builder;
+      },
+    } as unknown as SupabaseClient;
+  }
+
+  it('rejects a non-text message before touching the personal-channel send path', async () => {
+    const db = makePersonalChannelDb();
+    await expect(
+      sendMessageToConversation(db, 'acct-1', {
+        conversationId: 'cv-1',
+        messageType: 'image',
+        mediaUrl: 'https://x/y.jpg',
+      })
+    ).rejects.toMatchObject({ code: 'unsupported_channel_message_type', status: 400 });
+  });
+
+  it('dispatches text through sendPersonalTextMessage and persists the sent message', async () => {
+    const { sendPersonalTextMessage } = await import('@/lib/whatsapp-personal/send');
+    vi.mocked(sendPersonalTextMessage).mockResolvedValueOnce({ messageId: 'wa-msg-1' });
+
+    const db = makePersonalChannelDb();
+    const result = await sendMessageToConversation(db, 'acct-1', {
+      conversationId: 'cv-1',
+      messageType: 'text',
+      contentText: 'Hello there',
+    });
+
+    // sanitizedPhone strips all non-digits (Meta-API convention, reused
+    // here) before reaching the personal-channel send path — no '+'.
+    expect(sendPersonalTextMessage).toHaveBeenCalledWith(
+      'acct-1',
+      'session-1',
+      '14155550123',
+      'Hello there',
+      'wa-msg-1',
+      undefined,
+    );
+    expect(result).toEqual({ messageId: 'msg-row-1', whatsappMessageId: 'wa-msg-1' });
   });
 });

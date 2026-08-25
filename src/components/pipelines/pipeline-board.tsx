@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useMemo, useState } from "react";
+import { useMemo, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -13,14 +13,14 @@ import {
   closestCorners,
   type DragEndEvent,
   type DragStartEvent,
-} from "@dnd-kit/core";
-import type { Deal, PipelineStage } from "@/types";
-import { DealCard } from "./deal-card";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
-import { formatCurrency } from "@/lib/currency";
-import { useTranslations } from "next-intl";
+} from '@dnd-kit/core';
+import type { Deal, PipelineReplySettings, PipelineStage } from '@/types';
+import { DealCard } from './deal-card';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { formatCurrency } from '@/lib/currency';
+import { useTranslations } from 'next-intl';
 
 interface PipelineBoardProps {
   stages: PipelineStage[];
@@ -28,6 +28,10 @@ interface PipelineBoardProps {
   onDealMoved: (dealId: string, newStageId: string) => void;
   onAddDeal: (stageId: string) => void;
   onEditDeal: (deal: Deal) => void;
+  onPreviewDeal: (deal: Deal) => void;
+  onRemindDeal: (deal: Deal) => void;
+  settings: PipelineReplySettings;
+  now: number;
 }
 
 export function PipelineBoard({
@@ -36,13 +40,17 @@ export function PipelineBoard({
   onDealMoved,
   onAddDeal,
   onEditDeal,
+  onPreviewDeal,
+  onRemindDeal,
+  settings,
+  now,
 }: PipelineBoardProps) {
   const { defaultCurrency } = useAuth();
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
 
   const sortedStages = useMemo(
     () => [...stages].sort((a, b) => a.position - b.position),
-    [stages],
+    [stages]
   );
 
   const dealsByStage = useMemo(() => {
@@ -60,11 +68,11 @@ export function PipelineBoard({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     // Keyboard drag support: focus a card, Space to pick up, arrows to move,
     // Space to drop, Escape to cancel.
-    useSensor(KeyboardSensor),
+    useSensor(KeyboardSensor)
   );
 
   const activeDeal = activeDealId
-    ? deals.find((d) => d.id === activeDealId) ?? null
+    ? (deals.find((d) => d.id === activeDealId) ?? null)
     : null;
 
   function handleDragStart(event: DragStartEvent) {
@@ -108,7 +116,7 @@ export function PipelineBoard({
           const stageDeals = dealsByStage.get(stage.id) ?? [];
           const totalValue = stageDeals.reduce(
             (s, d) => s + Number(d.value || 0),
-            0,
+            0
           );
           return (
             <StageColumn
@@ -119,6 +127,10 @@ export function PipelineBoard({
               currency={defaultCurrency}
               onAddDeal={onAddDeal}
               onEditDeal={onEditDeal}
+              onPreviewDeal={onPreviewDeal}
+              onRemindDeal={onRemindDeal}
+              settings={settings}
+              now={now}
             />
           );
         })}
@@ -127,7 +139,7 @@ export function PipelineBoard({
       <DragOverlay
         dropAnimation={{
           duration: 200,
-          easing: "cubic-bezier(0.2, 0, 0, 1)",
+          easing: 'cubic-bezier(0.2, 0, 0, 1)',
         }}
       >
         {activeDeal ? (
@@ -138,6 +150,10 @@ export function PipelineBoard({
                 sortedStages.find((s) => s.id === activeDeal.stage_id) ?? null
               }
               onEdit={() => {}}
+              onPreview={() => {}}
+              onRemind={() => {}}
+              settings={settings}
+              now={now}
               isOverlay
             />
           </div>
@@ -193,6 +209,10 @@ function StageColumn({
   currency,
   onAddDeal,
   onEditDeal,
+  onPreviewDeal,
+  onRemindDeal,
+  settings,
+  now,
 }: {
   stage: PipelineStage;
   deals: Deal[];
@@ -200,9 +220,16 @@ function StageColumn({
   currency: string;
   onAddDeal: (stageId: string) => void;
   onEditDeal: (deal: Deal) => void;
+  onPreviewDeal: (deal: Deal) => void;
+  onRemindDeal: (deal: Deal) => void;
+  settings: PipelineReplySettings;
+  now: number;
 }) {
-  const t = useTranslations("Pipelines.board");
+  const t = useTranslations('Pipelines.board');
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
+  const awaitingCount = deals.filter(
+    (deal) => deal.conversation?.awaiting_reply
+  ).length;
 
   return (
     // On mobile each column is `w-[85vw]` (with a reasonable min/max)
@@ -211,35 +238,44 @@ function StageColumn({
     // restore the flex-1 share-the-row behavior. The droppable ref is
     // on the inner messages region below — intentionally NOT here, so
     // a drag over the column header doesn't highlight the whole column.
-    <div className="flex w-[85vw] min-w-[260px] max-w-[320px] shrink-0 snap-start flex-col rounded-xl border border-border bg-card/60 p-4 lg:w-auto lg:max-w-none lg:flex-1 lg:basis-[260px] lg:shrink lg:snap-none">
+    <div className="border-border bg-card/60 flex w-[85vw] max-w-[320px] min-w-[260px] shrink-0 snap-start flex-col rounded-xl border p-4 lg:w-auto lg:max-w-none lg:flex-1 lg:shrink lg:basis-[260px] lg:snap-none">
       {/* 3px colored top border — sits above the column's padding */}
       <div
         className="-mx-4 -mt-4 h-[3px] rounded-t-xl"
         style={{ backgroundColor: stage.color }}
       />
       <div className="flex items-center justify-between pt-3">
-        <h3 className="truncate text-sm font-semibold text-foreground">
+        <h3 className="text-foreground truncate text-sm font-semibold">
           {stage.name}
         </h3>
-        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+        <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium">
           {deals.length}
         </span>
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         {formatCurrency(totalValue, currency)}
       </p>
+      {awaitingCount > 0 && (
+        <p className="mt-1 flex items-center gap-1 text-[11px] font-medium text-red-600 dark:text-red-300">
+          <span className="relative flex size-2">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-30" />
+            <span className="relative inline-flex size-2 rounded-full bg-red-500" />
+          </span>
+          {awaitingCount} aguardando resposta
+        </p>
+      )}
 
       <div
         ref={setNodeRef}
         className={`mt-3 flex flex-1 flex-col gap-2 rounded-lg transition-all ${
           isOver
-            ? "bg-primary/5 outline outline-2 outline-dashed outline-primary outline-offset-2"
-            : ""
+            ? 'bg-primary/5 outline-primary outline outline-2 outline-offset-2 outline-dashed'
+            : ''
         }`}
       >
         {deals.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center rounded-lg border-2 border-dashed border-border py-10 text-xs text-muted-foreground">
-            {t("dropDealHere")}
+          <div className="border-border text-muted-foreground flex flex-1 items-center justify-center rounded-lg border-2 border-dashed py-10 text-xs">
+            {t('dropDealHere')}
           </div>
         ) : (
           deals.map((deal) => (
@@ -248,6 +284,10 @@ function StageColumn({
               deal={deal}
               stage={stage}
               onEdit={onEditDeal}
+              onPreview={onPreviewDeal}
+              onRemind={onRemindDeal}
+              settings={settings}
+              now={now}
             />
           ))
         )}
@@ -257,10 +297,10 @@ function StageColumn({
         variant="ghost"
         size="sm"
         onClick={() => onAddDeal(stage.id)}
-        className="mt-3 w-full justify-start border border-dashed border-border bg-transparent text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground"
+        className="border-border text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground mt-3 w-full justify-start border border-dashed bg-transparent"
       >
         <Plus className="mr-1 h-3 w-3" />
-        {t("addDeal")}
+        {t('addDeal')}
       </Button>
     </div>
   );
@@ -270,10 +310,18 @@ function DraggableDealCard({
   deal,
   stage,
   onEdit,
+  onPreview,
+  onRemind,
+  settings,
+  now,
 }: {
   deal: Deal;
   stage: PipelineStage;
   onEdit: (deal: Deal) => void;
+  onPreview: (deal: Deal) => void;
+  onRemind: (deal: Deal) => void;
+  settings: PipelineReplySettings;
+  now: number;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: deal.id,
@@ -284,9 +332,17 @@ function DraggableDealCard({
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      style={{ opacity: isDragging ? 0.3 : 1, touchAction: "none" }}
+      style={{ opacity: isDragging ? 0.3 : 1, touchAction: 'none' }}
     >
-      <DealCard deal={deal} stage={stage} onEdit={onEdit} />
+      <DealCard
+        deal={deal}
+        stage={stage}
+        onEdit={onEdit}
+        onPreview={onPreview}
+        onRemind={onRemind}
+        settings={settings}
+        now={now}
+      />
     </div>
   );
 }

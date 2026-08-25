@@ -67,7 +67,8 @@ export async function GET(request: Request) {
     let query = ctx.supabase
       .from('contacts')
       .select(selectClause)
-      .eq('account_id', ctx.accountId);
+      .eq('account_id', ctx.accountId)
+      .is('deleted_at', null);
 
     if (search) {
       query = query.or(`name.ilike.*${search}*,phone.ilike.*${search}*`);
@@ -127,7 +128,13 @@ export async function POST(request: Request) {
     );
 
     if (body.tags) {
-      await setContactTags(ctx.supabase, ctx.accountId, auditUserId, id, body.tags);
+      await setContactTags(
+        ctx.supabase,
+        ctx.accountId,
+        auditUserId,
+        id,
+        body.tags
+      );
     }
 
     const contact = await getContactById(ctx.supabase, ctx.accountId, id);

@@ -107,3 +107,41 @@ export function canDeleteAccount(role: AccountRole): boolean {
 export function canTransferOwnership(role: AccountRole): boolean {
   return role === "owner";
 }
+
+/**
+ * Owner / admin / agent: draft, edit, schedule, cancel content posts
+ * and manage social profile connections — the operational-write tier,
+ * same rank as canSendMessages.
+ */
+export function canManageContent(role: AccountRole): boolean {
+  return hasMinRole(role, "agent");
+}
+
+/** Owner / admin: move a content post from pending_approval to approved. */
+export function canApproveContent(role: AccountRole): boolean {
+  return hasMinRole(role, "admin");
+}
+
+/**
+ * Owner / admin / agent: create/edit ad accounts, campaigns, ad sets,
+ * ads, landing pages, and metrics, run diagnostics, and create
+ * optimization tasks — same tier as canManageContent.
+ */
+export function canManageTraffic(role: AccountRole): boolean {
+  return hasMinRole(role, "agent");
+}
+
+/** Owner / admin: move a recommendation from in_review to approved,
+ *  same tier as canApproveContent. */
+export function canApproveOptimization(role: AccountRole): boolean {
+  return hasMinRole(role, "admin");
+}
+
+/**
+ * Connect/disconnect the personal WhatsApp (QR/Baileys) channel —
+ * same admin-only tier as canEditSettings/whatsapp_config, since it
+ * holds long-lived session credentials.
+ */
+export function canManageWhatsappPersonal(role: AccountRole): boolean {
+  return hasMinRole(role, "admin");
+}

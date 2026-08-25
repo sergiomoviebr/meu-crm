@@ -30,6 +30,7 @@ import {
   sendLocationMessage,
   type MediaKind,
 } from '@/lib/whatsapp/meta-api';
+import { decideWhatsAppMessagingPolicy } from '@/lib/whatsapp/messaging-policy';
 import {
   validateInteractivePayload,
   interactivePayloadPreviewText,
@@ -37,6 +38,10 @@ import {
 } from '@/lib/whatsapp/interactive';
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption';
 import { supabaseAdmin } from '@/lib/flows/admin-client';
+import {
+  createPersonalMessageId,
+  sendPersonalTextMessage,
+} from '@/lib/whatsapp-personal/send';
 import {
   sanitizePhoneForMeta,
   isValidE164,
@@ -93,6 +98,9 @@ export interface SendMessageParams {
     address?: string | null;
   } | null;
   replyToMessageId?: string | null;
+  /** Internal retry worker sets false so a failed retry cannot enqueue
+   *  a second independent retry chain. */
+  scheduleRetry?: boolean;
 }
 
 export interface SendMessageResult {
@@ -100,6 +108,12 @@ export interface SendMessageResult {
   messageId: string;
   /** Meta's `wamid` for the delivered message. */
   whatsappMessageId: string;
+}
+
+function isRetryableProviderFailure(message: string): boolean {
+  return /timeout|timed out|temporar|unavailable|network|fetch failed|connection reset|meta api error:\s*5\d\d/i.test(
+    message
+  );
 }
 
 /**
@@ -283,6 +297,13 @@ export async function sendMessageToConversation(
   }
 
   const contact = conversation.contact;
+  if (contact?.deleted_at) {
+    throw new SendMessageError(
+      'contact_deleted',
+      'Este contato está na lixeira. Restaure-o antes de enviar mensagens.',
+      409
+    );
+  }
   if (!contact?.phone) {
     throw new SendMessageError(
       'bad_request',
@@ -297,6 +318,63 @@ export async function sendMessageToConversation(
       'bad_request',
       'Invalid phone number format',
       400
+    );
+  }
+
+  // The personal-WhatsApp (QR/Baileys) channel has nothing in common
+  // with the Meta-specific plumbing below (access tokens, template/
+  // media/interactive builders, phone-variant retries) — v1 only
+  // supports plain text on this channel, so it's handled as a fully
+  // separate, self-contained path rather than threading conditionals
+  // through ~200 lines of Meta-only logic.
+  if (conversation.channel === 'whatsapp_personal') {
+    if (messageType !== 'text' || !contentText) {
+      throw new SendMessageError(
+        'unsupported_channel_message_type',
+        'Personal WhatsApp only supports plain text messages for now.',
+        400
+      );
+    }
+    let personalSessionId = conversation.whatsapp_personal_session_id as
+      string | null;
+    if (!personalSessionId) {
+      const { data: defaultSession } = await db
+        .from('whatsapp_personal_sessions')
+        .select('id')
+        .eq('account_id', accountId)
+        .eq('is_default', true)
+        .maybeSingle();
+      personalSessionId = defaultSession?.id ?? null;
+    }
+    if (!personalSessionId) {
+      throw new SendMessageError(
+        'whatsapp_personal_disconnected',
+        'Esta conversa não está vinculada a uma conexão do WhatsApp.',
+        409
+      );
+    }
+    return sendPersonalChannelMessage(
+      db,
+      accountId,
+      personalSessionId,
+      conversationId,
+      contact.id,
+      sanitizedPhone,
+      contentText,
+      conversation.whatsapp_remote_jid as string | null,
+      params.scheduleRetry !== false
+    );
+  }
+
+  const messagingPolicy = decideWhatsAppMessagingPolicy({
+    channel: 'meta_cloud_api',
+    lastCustomerMessageAt: conversation.last_customer_message_at as string | null,
+  });
+  if (messagingPolicy.mode === 'approved_template' && messageType !== 'template') {
+    throw new SendMessageError(
+      'approved_template_required',
+      'O WhatsApp exige uma mensagem aprovada para continuar este atendimento.',
+      409
     );
   }
 
@@ -381,6 +459,60 @@ export async function sendMessageToConversation(
     }
     templateRow = data ?? null;
   }
+
+  // Persist the attempt before the external call. Meta accepting a
+  // request means "sent to provider", not "delivered to recipient".
+  const metaStartedAt = new Date().toISOString();
+  const { data: messageRecord, error: createError } = await db
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_type: 'agent',
+      content_type: messageType,
+      content_text:
+        (messageType === 'interactive' ? interactivePayload!.body : null) ??
+        (messageType === 'location' && location
+          ? [
+              location.name,
+              location.address,
+              `${location.latitude},${location.longitude}`,
+            ]
+              .filter(Boolean)
+              .join(' - ')
+          : null) ??
+        contentText ??
+        null,
+      media_url: mediaUrl || null,
+      template_name: templateName || null,
+      interactive_payload:
+        messageType === 'interactive' ? interactivePayload : null,
+      status: 'sending',
+      provider: 'meta_cloud_api',
+      provider_status: 'pending',
+      attempt_count: 1,
+      sending_at: metaStartedAt,
+      last_attempt_at: metaStartedAt,
+      reply_to_message_id: replyToMessageId || null,
+    })
+    .select()
+    .single();
+
+  if (createError || !messageRecord) {
+    throw new SendMessageError(
+      'db_error',
+      `Could not create the message attempt: ${createError?.message ?? 'unknown database error'}`,
+      500
+    );
+  }
+
+  await db.from('message_delivery_attempts').insert({
+    account_id: accountId,
+    message_id: messageRecord.id,
+    attempt_number: 1,
+    provider: 'meta_cloud_api',
+    status: 'started',
+    started_at: metaStartedAt,
+  });
 
   const attempt = async (phone: string): Promise<string> => {
     if (messageType === 'template') {
@@ -494,7 +626,47 @@ export async function sendMessageToConversation(
     const message =
       err instanceof Error ? err.message : 'Unknown Meta API error';
     console.error('[send-message] Meta send failed for all variants:', message);
-    throw new SendMessageError('meta_error', `Meta API error: ${message}`, 502);
+    const retryable = isRetryableProviderFailure(message);
+    const errorCode = retryable ? 'meta_temporary_error' : 'meta_error';
+    const failedAt = new Date().toISOString();
+    await Promise.all([
+      db
+        .from('messages')
+        .update({
+          status: 'failed',
+          provider_status: 'failed',
+          error_code: errorCode,
+          error_message: message,
+          failed_at: failedAt,
+        })
+        .eq('id', messageRecord.id),
+      db
+        .from('message_delivery_attempts')
+        .update({
+          status: 'failed',
+          error_code: errorCode,
+          error_message: message,
+          is_retryable: retryable,
+          finished_at: failedAt,
+        })
+        .eq('message_id', messageRecord.id)
+        .eq('attempt_number', 1),
+    ]);
+    if (retryable && messageType === 'text' && params.scheduleRetry !== false) {
+      await db.from('message_retry_jobs').upsert(
+        {
+          account_id: accountId,
+          source_message_id: messageRecord.id,
+          status: 'pending',
+          attempt_count: 1,
+          max_attempts: 3,
+          next_attempt_at: new Date(Date.now() + 2 * 60_000).toISOString(),
+          last_error: message,
+        },
+        { onConflict: 'source_message_id' }
+      );
+    }
+    throw new SendMessageError(errorCode, `Meta API error: ${message}`, 502);
   }
 
   if (workingPhone !== sanitizedPhone) {
@@ -512,50 +684,60 @@ export async function sendMessageToConversation(
   // Interactive messages persist the body as content_text (so the
   // conversation-list preview reads sensibly) plus the full structured
   // payload so the thread can re-render the buttons / rows.
-  const interactiveBody =
-    messageType === 'interactive' ? interactivePayload!.body : null;
   // Same flattening the inbound webhook uses (route.ts's location case)
   // so a location bubble reads identically whether it was sent or
   // received — content_text is the only place location data lives,
   // there's no dedicated lat/lng column.
   const locationText =
     messageType === 'location' && location
-      ? [location.name, location.address, `${location.latitude},${location.longitude}`]
+      ? [
+          location.name,
+          location.address,
+          `${location.latitude},${location.longitude}`,
+        ]
           .filter(Boolean)
           .join(' - ')
       : null;
 
-  const { data: messageRecord, error: msgError } = await db
+  const acceptedAt = new Date().toISOString();
+  const { error: msgError } = await db
     .from('messages')
-    .insert({
-      conversation_id: conversationId,
-      sender_type: 'agent',
-      content_type: messageType,
-      content_text: interactiveBody ?? locationText ?? contentText ?? null,
-      media_url: mediaUrl || null,
-      template_name: templateName || null,
-      interactive_payload:
-        messageType === 'interactive' ? interactivePayload : null,
+    .update({
       message_id: waMessageId,
       status: 'sent',
-      reply_to_message_id: replyToMessageId || null,
+      provider_status: 'accepted',
+      sent_at: acceptedAt,
+      error_code: null,
+      error_message: null,
     })
-    .select()
-    .single();
+    .eq('id', messageRecord.id);
 
   if (msgError) {
-    console.error('[send-message] error inserting sent message:', msgError);
+    console.error(
+      '[send-message] error updating accepted Meta message:',
+      msgError
+    );
     throw new SendMessageError(
       'db_error',
-      `Message sent to Meta but failed to save to DB: ${msgError.message}`,
+      `Message sent to Meta but failed to update its status: ${msgError.message}`,
       500
     );
   }
 
+  await db
+    .from('message_delivery_attempts')
+    .update({
+      status: 'accepted',
+      external_message_id: waMessageId,
+      finished_at: acceptedAt,
+    })
+    .eq('message_id', messageRecord.id)
+    .eq('attempt_number', 1);
+
   const lastMessageText =
     messageType === 'interactive'
       ? interactivePayloadPreviewText(interactivePayload!)
-      : locationText ?? contentText ?? `[${messageType}]`;
+      : (locationText ?? contentText ?? `[${messageType}]`);
 
   await db
     .from('conversations')
@@ -578,6 +760,188 @@ export async function sendMessageToConversation(
       })
       .eq('account_id', accountId)
       .eq('contact_id', contact.id)
+      .eq('status', 'active');
+    if (pauseErr) {
+      console.error('[flows] pause-on-agent-send failed:', pauseErr.message);
+    }
+  } catch (err) {
+    console.error(
+      '[flows] pause-on-agent-send threw:',
+      err instanceof Error ? err.message : err
+    );
+  }
+
+  return { messageId: messageRecord.id, whatsappMessageId: waMessageId };
+}
+
+/**
+ * The whatsapp_personal (QR/Baileys) counterpart to the Meta send
+ * path above — sends through the account's live socket
+ * (src/lib/whatsapp-personal/connection-manager.ts), then persists +
+ * updates the conversation + pauses any active Flow, mirroring the
+ * Meta path's tail exactly so both channels behave identically from
+ * the Inbox's point of view.
+ */
+async function sendPersonalChannelMessage(
+  db: SupabaseClient,
+  accountId: string,
+  sessionId: string,
+  conversationId: string,
+  contactId: string,
+  phone: string,
+  text: string,
+  remoteJid: string | null,
+  scheduleRetry: boolean
+): Promise<SendMessageResult> {
+  const waMessageId = createPersonalMessageId();
+  const startedAt = new Date().toISOString();
+  const { data: messageRecord, error: msgError } = await db
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_type: 'agent',
+      content_type: 'text',
+      content_text: text,
+      message_id: waMessageId,
+      status: 'sending',
+      provider: 'whatsapp_personal',
+      provider_status: 'pending',
+      attempt_count: 1,
+      sending_at: startedAt,
+      last_attempt_at: startedAt,
+    })
+    .select()
+    .single();
+
+  if (msgError) {
+    console.error(
+      '[send-message] error creating personal-channel message attempt:',
+      msgError
+    );
+    throw new SendMessageError(
+      'db_error',
+      `Could not create the message attempt: ${msgError.message}`,
+      500
+    );
+  }
+
+  await db.from('message_delivery_attempts').insert({
+    account_id: accountId,
+    message_id: messageRecord.id,
+    attempt_number: 1,
+    provider: 'whatsapp_personal',
+    status: 'started',
+    started_at: startedAt,
+  });
+
+  let resolvedRemoteJid = remoteJid;
+  try {
+    const personalResult = await sendPersonalTextMessage(
+      accountId,
+      sessionId,
+      phone,
+      text,
+      waMessageId,
+      remoteJid
+    );
+    resolvedRemoteJid = personalResult.remoteJid ?? resolvedRemoteJid;
+  } catch (err) {
+    const sendError =
+      err instanceof SendMessageError
+        ? err
+        : new SendMessageError(
+            'provider_error',
+            'O WhatsApp não confirmou o envio.',
+            502
+          );
+    const failedAt = new Date().toISOString();
+    const retryable = [
+      'whatsapp_personal_disconnected',
+      'whatsapp_personal_lookup_failed',
+    ].includes(sendError.code);
+    await Promise.all([
+      db
+        .from('messages')
+        .update({
+          status: 'failed',
+          provider_status: 'failed',
+          error_code: sendError.code,
+          error_message: sendError.message,
+          failed_at: failedAt,
+        })
+        .eq('id', messageRecord.id),
+      db
+        .from('message_delivery_attempts')
+        .update({
+          status: 'failed',
+          error_code: sendError.code,
+          error_message: sendError.message,
+          is_retryable: retryable,
+          finished_at: failedAt,
+        })
+        .eq('message_id', messageRecord.id)
+        .eq('attempt_number', 1),
+    ]);
+    if (retryable && scheduleRetry) {
+      await db.from('message_retry_jobs').upsert(
+        {
+          account_id: accountId,
+          source_message_id: messageRecord.id,
+          status: 'pending',
+          attempt_count: 1,
+          max_attempts: 3,
+          next_attempt_at: new Date(Date.now() + 2 * 60_000).toISOString(),
+          last_error: sendError.message,
+        },
+        { onConflict: 'source_message_id' }
+      );
+    }
+    throw sendError;
+  }
+
+  const acceptedAt = new Date().toISOString();
+  await Promise.all([
+    db
+      .from('messages')
+      .update({
+        status: 'sent',
+        provider_status: 'server_ack',
+        sent_at: acceptedAt,
+        error_code: null,
+        error_message: null,
+      })
+      .eq('id', messageRecord.id),
+    db
+      .from('message_delivery_attempts')
+      .update({
+        status: 'accepted',
+        external_message_id: waMessageId,
+        finished_at: acceptedAt,
+      })
+      .eq('message_id', messageRecord.id)
+      .eq('attempt_number', 1),
+  ]);
+
+  await db
+    .from('conversations')
+    .update({
+      last_message_text: text,
+      last_message_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      ...(resolvedRemoteJid ? { whatsapp_remote_jid: resolvedRemoteJid } : {}),
+    })
+    .eq('id', conversationId);
+
+  try {
+    const { error: pauseErr } = await supabaseAdmin()
+      .from('flow_runs')
+      .update({
+        status: 'paused_by_agent',
+        ended_at: new Date().toISOString(),
+        end_reason: 'agent_replied',
+      })
+      .eq('account_id', accountId)
+      .eq('contact_id', contactId)
       .eq('status', 'active');
     if (pauseErr) {
       console.error('[flows] pause-on-agent-send failed:', pauseErr.message);

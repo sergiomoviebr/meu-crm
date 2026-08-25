@@ -30,6 +30,9 @@ import {
   Sparkles,
   Loader2,
   StickyNote,
+  Trash2,
+  Search,
+  X,
 } from "lucide-react";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import type { Locale } from "date-fns";
@@ -66,6 +69,10 @@ import { TemplatePicker } from "./template-picker";
 import { AiThreadBanner } from "./ai-thread-banner";
 import { buildReplyPreview } from "./reply-quote";
 import { toast } from "sonner";
+import { useCan } from "@/hooks/use-can";
+import { GatedButton } from "@/components/ui/gated-button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 interface ReplyDraft {
   id: string;
@@ -124,6 +131,13 @@ interface MessageThreadProps {
    */
   contactPanelOpen?: boolean;
   onToggleContactPanel?: () => void;
+  /**
+   * Fired after the conversation is deleted so the parent can clear its
+   * selection immediately, rather than waiting on the realtime DELETE
+   * round-trip. Optional so existing callers keep working; the delete
+   * action is only rendered when this is provided.
+   */
+  onConversationDeleted?: () => void;
 }
 
 function formatDateSeparator(
@@ -186,6 +200,7 @@ export function MessageThread({
   onRefresh,
   contactPanelOpen,
   onToggleContactPanel,
+  onConversationDeleted,
 }: MessageThreadProps) {
   const t = useTranslations("Inbox.messageThread");
   const tTimer = useTranslations("Inbox.sessionTimer");
@@ -194,6 +209,10 @@ export function MessageThread({
 
   const { user, accountId } = useAuth();
   const { getPresence, getRow, now } = usePresence();
+  // Same floor as the conversations_delete RLS policy
+  // (is_account_member(account_id, 'agent')) — gated in the UI too so a
+  // viewer sees a disabled button with a reason instead of a raw RLS error.
+  const canDelete = useCan("send-messages");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
@@ -283,6 +302,12 @@ export function MessageThread({
   }, [conversation, accountId, summaryText, t]);
 
   const [replyTo, setReplyTo] = useState<ReplyDraft | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [editText, setEditText] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingConversation, setDeletingConversation] = useState(false);
+  const [messageSearchOpen, setMessageSearchOpen] = useState(false);
+  const [messageSearch, setMessageSearch] = useState("");
   // Which attachment the media viewer is showing. Lives here rather than in
   // the bubble so the viewer can page through every image/video in the
   // thread (issue #373). Paired with the conversation it belongs to and read
@@ -316,8 +341,11 @@ export function MessageThread({
     };
   }, []);
 
-  // 24-hour session timer
+  // The customer-care window only applies to free-form messages sent through
+  // Meta's official Cloud API. Personal WhatsApp conversations must never be
+  // blocked by this policy, and the thread/history remains usable either way.
   const sessionInfo = useMemo(() => {
+    if (conversation?.channel !== "meta_cloud_api") return { expired: false, remaining: "" };
     if (!messages.length) return { expired: false, remaining: "" };
 
     // Find last customer message
@@ -341,7 +369,7 @@ export function MessageThread({
         : tTimer("xmRemaining", { minutes: Math.floor(hoursLeft * 60) });
 
     return { expired, remaining };
-  }, [messages, tTimer]);
+  }, [conversation?.channel, messages, tTimer]);
 
   // Store latest callback in a ref so fetchMessages doesn't need to
   // depend on `onMessagesLoaded` — otherwise parent re-renders cause
@@ -915,6 +943,59 @@ export function MessageThread({
     [authorLabelFor],
   );
 
+  const handleStartEdit = useCallback((msg: Message) => {
+    setEditingMessage(msg);
+    setEditText(msg.content_text ?? "");
+  }, []);
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!editingMessage) return;
+    const trimmed = editText.trim();
+    if (!trimmed) return;
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/whatsapp/messages/${editingMessage.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content_text: trimmed }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(data?.error ?? t("editFailed"));
+        return;
+      }
+      onUpdateMessage(editingMessage.id, {
+        content_text: trimmed,
+        edited_at: new Date().toISOString(),
+      });
+      toast.success(data?.editedOnWhatsapp ? t("editedOnWhatsapp") : t("editedLocalOnly"));
+      setEditingMessage(null);
+    } finally {
+      setSavingEdit(false);
+    }
+  }, [editingMessage, editText, onUpdateMessage, t]);
+
+  const handleDeleteConversation = useCallback(async () => {
+    if (!conversation) return;
+    if (!window.confirm(t("deleteConversationConfirm"))) return;
+    setDeletingConversation(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("conversations")
+        .delete()
+        .eq("id", conversation.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success(t("conversationDeleted"));
+      onConversationDeleted?.();
+    } finally {
+      setDeletingConversation(false);
+    }
+  }, [conversation, onConversationDeleted, t]);
+
   // Single reaction-set primitive. emoji === "" removes; otherwise adds/swaps.
   // The "toggle" semantic (pill click) is computed at the call site where the
   // current reactions for the bubble are already in scope — keeps this
@@ -1020,7 +1101,12 @@ export function MessageThread({
   }
 
   const displayName = contact.name || contact.phone;
-  const messageGroups = groupMessagesByDate(messages);
+  const searchedMessages = messageSearch.trim()
+    ? messages.filter((message) =>
+        (message.content_text ?? "").toLocaleLowerCase().includes(messageSearch.trim().toLocaleLowerCase())
+      )
+    : messages;
+  const messageGroups = groupMessagesByDate(searchedMessages);
   const currentStatus = STATUS_OPTIONS.find(
     (s) => s.value === conversation.status
   );
@@ -1065,19 +1151,28 @@ export function MessageThread({
           </div>
           {/* Session timer badge — hidden on the narrowest phones so
               the name + back arrow keep their room. */}
-          <Badge
+          {!sessionInfo.expired && sessionInfo.remaining && <Badge
             variant="outline"
             className={cn(
               "ml-1 hidden gap-1 border-border text-[10px] sm:inline-flex sm:ml-2",
-              sessionInfo.expired ? "text-red-400" : "text-primary"
+              "text-primary"
             )}
           >
             <Clock className="h-3 w-3" />
             {sessionInfo.remaining}
-          </Badge>
+          </Badge>}
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMessageSearchOpen((value) => !value)}
+            aria-label={t("searchMessages")}
+            title={t("searchMessages")}
+            className={cn("text-muted-foreground hover:bg-muted hover:text-foreground flex size-7 items-center justify-center rounded-md", messageSearchOpen && "bg-muted text-primary")}
+          >
+            <Search className="size-4" />
+          </button>
           {/* Contact-panel toggle — desktop only. The contact sidebar
               eats a chunk of horizontal width that crowds the thread on
               smaller laptops; this lets agents reclaim it when they just
@@ -1234,8 +1329,33 @@ export function MessageThread({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {onConversationDeleted && (
+            <GatedButton
+              canAct={canDelete}
+              gateReason={t("deleteConversationGateReason")}
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleDeleteConversation}
+              disabled={deletingConversation}
+              aria-label={t("deleteConversation")}
+              title={t("deleteConversation")}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </GatedButton>
+          )}
         </div>
       </div>
+
+      {messageSearchOpen && (
+        <div className="border-border bg-card flex items-center gap-2 border-b px-3 py-2">
+          <Search className="text-muted-foreground size-4" />
+          <Input autoFocus value={messageSearch} onChange={(event) => setMessageSearch(event.target.value)} placeholder={t("searchMessagesPlaceholder")} className="h-8 border-0 bg-muted shadow-none focus-visible:ring-0" />
+          {messageSearch && <span className="text-muted-foreground whitespace-nowrap text-xs">{t("searchResults", { count: searchedMessages.length })}</span>}
+          <button type="button" onClick={() => { setMessageSearch(""); setMessageSearchOpen(false); }} aria-label={t("closeSearch")} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+        </div>
+      )}
 
       {/* Messages Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
@@ -1250,6 +1370,8 @@ export function MessageThread({
               {t("sendTemplateHint")}
             </p>
           </div>
+        ) : searchedMessages.length === 0 ? (
+          <div className="border-border text-muted-foreground rounded-lg border border-dashed px-4 py-10 text-center text-sm">{t("noSearchResults")}</div>
         ) : (
           <div className="space-y-4">
             {messageGroups.map((group) => (
@@ -1295,6 +1417,7 @@ export function MessageThread({
                         onReact={(emoji) => {
                           if (emoji) void postReaction(msg.id, emoji);
                         }}
+                        onEdit={() => handleStartEdit(msg)}
                       >
                         <MessageBubble
                           message={msg}
@@ -1391,6 +1514,40 @@ export function MessageThread({
                 <StickyNote className="mr-1 h-4 w-4" />
               )}
               {t("aiSummarySaveAsNote")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit a sent text message. Whether this actually changes what the
+          customer sees depends on the channel — the route's response
+          (`editedOnWhatsapp`) drives which toast fires; the dialog copy
+          stays neutral rather than promising an outcome up front. */}
+      <Dialog
+        open={!!editingMessage}
+        onOpenChange={(open) => !open && setEditingMessage(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("editMessage")}</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            rows={4}
+            autoFocus
+          />
+          <p className="text-xs text-muted-foreground">{t("editMessageHint")}</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingMessage(null)}>
+              {t("editCancel")}
+            </Button>
+            <Button
+              disabled={savingEdit || !editText.trim()}
+              onClick={handleSaveEdit}
+            >
+              {savingEdit && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+              {t("editSave")}
             </Button>
           </DialogFooter>
         </DialogContent>

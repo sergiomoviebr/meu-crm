@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { CornerUpLeft, Copy, SmilePlus } from "lucide-react";
+import { CornerUpLeft, Copy, Pencil, SmilePlus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -20,6 +20,8 @@ interface MessageActionsProps {
   message: Message;
   onReply: () => void;
   onReact: (emoji: string) => void;
+  /** Only rendered for our own text messages — see the `canEdit` check below. */
+  onEdit?: () => void;
   children: ReactNode;
 }
 
@@ -32,6 +34,7 @@ export function MessageActions({
   message,
   onReply,
   onReact,
+  onEdit,
   children,
 }: MessageActionsProps) {
   const t = useTranslations("Inbox.actions");
@@ -44,6 +47,15 @@ export function MessageActions({
 
   const isAgent =
     message.sender_type === "agent" || message.sender_type === "bot";
+  // Only our own plain-text sends make sense to correct — editing what a
+  // customer said isn't a thing, and media/template/interactive/location
+  // messages have no editable body (see PATCH /api/whatsapp/messages/[id]).
+  const canEdit = isAgent && message.content_type === "text" && !!onEdit;
+
+  const handleEdit = () => {
+    onEdit?.();
+    setTouchOpen(false);
+  };
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -144,6 +156,16 @@ export function MessageActions({
         >
           <Copy className="h-3.5 w-3.5" />
         </button>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={handleEdit}
+            className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
+            aria-label={t("edit")}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
       </div>
     </div>

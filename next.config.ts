@@ -105,6 +105,16 @@ const nextConfig: NextConfig = {
   // Harmless outside Docker: `next start` keeps working as before.
   output: "standalone",
 
+  // @whiskeysockets/baileys (the personal-WhatsApp/QR channel,
+  // src/lib/whatsapp-personal/) optionally uses `jimp`/`sharp` for
+  // sticker/thumbnail processing — genuinely optional at runtime
+  // (`import('jimp').catch(() => {})`), but Turbopack's static bundler
+  // tries to resolve them anyway and fails the build since neither is
+  // installed (v1 scope is text-only, no media processing). Leaving
+  // this package unbundled/external makes Node resolve it normally at
+  // runtime instead, where the optional imports fail closed as designed.
+  serverExternalPackages: ["@whiskeysockets/baileys"],
+
   /**
    * Cross-origin dev access (Next.js 16).
    *

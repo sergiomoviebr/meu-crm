@@ -46,6 +46,11 @@ next-env.d.ts
 # Claude Code local tool state (not project content)
 /.claude/
 
+# Claudex planning-loop runtime state (lockfile, findings, session
+# ownership) — ephemeral, regenerated per /claudex run. PLAN.md itself
+# is NOT ignored: it's the actual deliverable, kept trackable.
+/.claudex/
+
 # Playwright
 /test-results/
 /playwright-report/

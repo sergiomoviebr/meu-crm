@@ -24,6 +24,7 @@ import {
 } from "./message-media";
 import { InteractivePreview } from "@/components/interactive/interactive-preview";
 import { useTranslations } from "next-intl";
+import { MessageDeliveryDetails } from "./message-delivery-details";
 
 interface MessageBubbleProps {
   message: Message;
@@ -249,6 +250,16 @@ export function MessageBubble({
               {t("aiBadge")}
             </span>
           )}
+          {message.edited_at && (
+            <span
+              className={cn(
+                "text-[10px] italic",
+                isAgent ? "text-primary-foreground/70" : "text-muted-foreground",
+              )}
+            >
+              {t("edited")}
+            </span>
+          )}
           <span
             className={cn(
               "text-[10px]",
@@ -261,7 +272,8 @@ export function MessageBubble({
           >
             {time}
           </span>
-          {isAgent && <StatusIcon status={message.status} />}
+          {isAgent && !message.id.startsWith("temp-") && <MessageDeliveryDetails message={message} />}
+          {isAgent && message.id.startsWith("temp-") && <StatusIcon status={message.status} />}
         </div>
       </div>
       {reactions && reactions.length > 0 && onToggleReaction && (

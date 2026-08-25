@@ -54,6 +54,9 @@ function walk(steps: StepLike[], prefix: string, issues: ValidationIssue[]): voi
 function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): void {
   const c = step.step_config ?? {}
   switch (step.step_type) {
+    case 'sales_qualify':
+      if (c.mode !== 'suggestion') issues.push({ path: `${path}.mode`, message: 'sales qualification must start in suggestion mode' })
+      break
     case 'send_message':
       if (!nonEmpty(c.text)) {
         issues.push({ path: `${path}.text`, message: 'message text is required' })

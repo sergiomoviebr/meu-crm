@@ -30,6 +30,7 @@ import {
   AccordionContent,
 } from '@/components/ui/accordion';
 import type { WhatsAppConfig as WhatsAppConfigType } from '@/types';
+import { loadFacebookSdk, type FacebookLoginResponse } from '@/lib/meta-oauth/fb-sdk-client';
 
 const MASKED_TOKEN = '••••••••••••••••';
 
@@ -88,6 +89,36 @@ export function WhatsAppConfig() {
   };
   const [registrationProbe, setRegistrationProbe] =
     useState<RegistrationProbe | null>(null);
+
+  // Embedded Signup (the "Connect with Meta" popup) — see
+  // src/lib/meta-oauth/fb-sdk-client.ts and
+  // POST /api/whatsapp/embedded-signup/exchange. Meta delivers the
+  // WABA/phone number id via a separate `window.postMessage` event
+  // that can land slightly before or after the FB.login callback
+  // fires with the `code`, so both are captured into this ref and
+  // handleConnectWithMeta waits for whichever arrives second.
+  const [embeddedSignupLoading, setEmbeddedSignupLoading] = useState(false);
+  const embeddedSignupWabaRef = useRef<{ wabaId: string; phoneNumberId: string } | null>(null);
+
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.origin !== 'https://www.facebook.com' && event.origin !== 'https://web.facebook.com') return;
+      let data: { type?: string; event?: string; data?: { waba_id?: string; phone_number_id?: string } };
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        return; // Meta's SDK posts other non-JSON messages too — ignore.
+      }
+      if (data.type === 'WA_EMBEDDED_SIGNUP' && data.event === 'FINISH' && data.data?.waba_id && data.data?.phone_number_id) {
+        embeddedSignupWabaRef.current = {
+          wabaId: data.data.waba_id,
+          phoneNumberId: data.data.phone_number_id,
+        };
+      }
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
 
   const webhookUrl =
     typeof window !== 'undefined'
@@ -274,6 +305,66 @@ export function WhatsAppConfig() {
       toast.error('Failed to save configuration');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleConnectWithMeta() {
+    const appId = process.env.NEXT_PUBLIC_META_APP_ID;
+    const configId = process.env.NEXT_PUBLIC_META_WHATSAPP_CONFIG_ID;
+    if (!appId || !configId) {
+      toast.error(t('embeddedSignupNotConfigured'));
+      return;
+    }
+
+    setEmbeddedSignupLoading(true);
+    embeddedSignupWabaRef.current = null;
+    try {
+      const FB = await loadFacebookSdk(appId);
+      FB.login(
+        (response: FacebookLoginResponse) => {
+          void (async () => {
+            const code = response.authResponse?.code;
+            if (!code) {
+              setEmbeddedSignupLoading(false);
+              // status === 'unknown' just means the popup was closed —
+              // not worth an error toast for that specific case.
+              if (response.status !== 'unknown') toast.error(t('embeddedSignupCancelled'));
+              return;
+            }
+            // The postMessage carrying waba_id/phone_number_id can
+            // land slightly after this callback — give it a short
+            // window rather than failing immediately.
+            for (let i = 0; i < 20 && !embeddedSignupWabaRef.current; i++) {
+              await new Promise((resolve) => setTimeout(resolve, 150));
+            }
+            if (!embeddedSignupWabaRef.current) {
+              setEmbeddedSignupLoading(false);
+              toast.error(t('embeddedSignupMissingWaba'));
+              return;
+            }
+            try {
+              const res = await fetch('/api/whatsapp/embedded-signup/exchange', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ code, ...embeddedSignupWabaRef.current }),
+              });
+              const body = await res.json().catch(() => ({}));
+              if (!res.ok || body?.success === false) {
+                toast.error(body?.error ?? body?.registration_error ?? t('embeddedSignupFailed'));
+              } else {
+                toast.success(t('embeddedSignupSuccess'));
+              }
+              if (accountId) await fetchConfig(accountId);
+            } finally {
+              setEmbeddedSignupLoading(false);
+            }
+          })();
+        },
+        { config_id: configId, response_type: 'code', override_default_response_type: true }
+      );
+    } catch (err) {
+      setEmbeddedSignupLoading(false);
+      toast.error(err instanceof Error ? err.message : t('embeddedSignupFailed'));
     }
   }
 
@@ -553,6 +644,29 @@ export function WhatsAppConfig() {
             )}
           </Alert>
         )}
+
+        {/* Connect with Meta (Embedded Signup) — the one-click path.
+            The manual form below stays as a fallback/advanced option
+            (e.g. connecting a Meta test number, which Embedded Signup
+            doesn't cover the same way). */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-foreground">{t('embeddedSignupTitle')}</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              {t('embeddedSignupDescription')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={handleConnectWithMeta} disabled={embeddedSignupLoading}>
+              {embeddedSignupLoading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <ExternalLink className="size-4" />
+              )}
+              {embeddedSignupLoading ? t('embeddedSignupConnecting') : t('embeddedSignupConnect')}
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* API Credentials */}
         <Card>

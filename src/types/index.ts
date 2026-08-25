@@ -1,5 +1,5 @@
-import type { AccountRole } from "@/lib/auth/roles";
-import type { InteractiveMessagePayload } from "@/lib/whatsapp/interactive";
+import type { AccountRole } from '@/lib/auth/roles';
+import type { InteractiveMessagePayload } from '@/lib/whatsapp/interactive';
 
 export type {
   InteractiveMessagePayload,
@@ -8,7 +8,7 @@ export type {
   InteractiveButton,
   InteractiveListRow,
   InteractiveListSection,
-} from "@/lib/whatsapp/interactive";
+} from '@/lib/whatsapp/interactive';
 
 export interface Profile {
   id: string;
@@ -87,7 +87,7 @@ export interface AccountInvitation {
   id: string;
   account_id: string;
   /** Roles offered via invite — owner is never offered. */
-  role: Exclude<AccountRole, "owner">;
+  role: Exclude<AccountRole, 'owner'>;
   created_by_user_id: string | null;
   label: string | null;
   created_at: string;
@@ -105,14 +105,110 @@ export interface Contact {
    *  and unique per account. Read-only. */
   phone_normalized?: string;
   name?: string;
+  preferred_name?: string | null;
   email?: string;
   company?: string;
+  job_title?: string | null;
+  /** Sensitive: never include in contact list payloads or application logs. */
+  cpf?: string | null;
+  cnpj?: string | null;
+  whatsapp?: string | null;
+  secondary_phone?: string | null;
+  birth_day?: number | null;
+  birth_month?: number | null;
+  birth_year?: number | null;
+  notes?: string | null;
+  address_zip?: string | null;
+  address_street?: string | null;
+  address_number?: string | null;
+  address_complement?: string | null;
+  address_neighborhood?: string | null;
+  address_city?: string | null;
+  address_state?: string | null;
+  address_country?: string | null;
+  relationship_type?: ContactRelationshipType | null;
+  source?: string | null;
+  owner_user_id?: string | null;
+  relationship_status?: ContactRelationshipStatus | null;
+  first_contact_at?: string | null;
+  last_contact_at?: string | null;
+  next_follow_up_at?: string | null;
+  archived_at?: string | null;
+  deleted_at?: string | null;
   avatar_url?: string;
   created_at: string;
   updated_at: string;
   /** Hydrated by queries that embed `contact_tags(tags(*))` (e.g. the
    *  Inbox conversation list, for tag filtering). Absent otherwise. */
   tags?: Tag[];
+  /**
+   * For a lead contact: the client contact (itself referenced by
+   * ad_accounts.contact_id) whose campaigns generated this lead — see
+   * src/lib/traffic/attribution.ts. Null for client contacts
+   * themselves and for leads with no resolvable attribution.
+   */
+  managed_by_contact_id?: string | null;
+  attribution_source?: 'ctwa_referral' | 'personal_whatsapp_session' | null;
+  attribution_platform?: 'meta' | 'google' | 'other' | null;
+  attribution_campaign_id?: string | null;
+  attribution_ad_set_id?: string | null;
+  attribution_ad_id?: string | null;
+  attribution_click_id?: string | null;
+  attribution_headline?: string | null;
+  attribution_source_url?: string | null;
+  attributed_at?: string | null;
+}
+
+export type ContactRelationshipType =
+  'client' | 'lead' | 'prospect' | 'partner' | 'supplier' | 'other';
+
+export type ContactRelationshipStatus =
+  'active' | 'inactive' | 'nurturing' | 'qualified' | 'unqualified';
+
+export interface ContactEvent {
+  id: string;
+  account_id: string;
+  contact_id: string | null;
+  actor_user_id: string | null;
+  event_type:
+    | 'CONTACT_CREATED'
+    | 'CONTACT_UPDATED'
+    | 'CONTACT_DELETED'
+    | 'CONTACT_RESTORED'
+    | 'CONTACT_ARCHIVED'
+    | 'CONTACT_TAG_ADDED'
+    | 'CONTACT_TAG_REMOVED'
+    | 'CONTACT_OWNER_CHANGED'
+    | 'FOLLOWUP_CREATED'
+    | 'MESSAGE_SENT'
+    | 'MESSAGE_RECEIVED';
+  metadata: Record<string, unknown>;
+  occurred_at: string;
+}
+
+export interface ContactReminder {
+  id: string;
+  account_id: string;
+  contact_id: string;
+  user_id: string;
+  title: string;
+  remind_at: string;
+  completed_at?: string | null;
+  notified_at?: string | null;
+  created_at: string;
+}
+
+export interface UpcomingContactBirthday {
+  id: string;
+  name?: string | null;
+  preferred_name?: string | null;
+  company?: string | null;
+  phone: string;
+  birth_day: number;
+  birth_month: number;
+  birth_year?: number | null;
+  next_birthday: string;
+  days_until: number;
 }
 
 export interface Tag {
@@ -165,14 +261,38 @@ export interface ConversationNote {
 
 export type ConversationStatus = 'open' | 'pending' | 'closed';
 
+/**
+ * Which transport this conversation's messages flow through.
+ * `meta_cloud_api` — the official WhatsApp Business Cloud API (the
+ * only channel that existed before migration 045).
+ * `whatsapp_personal` — a personal WhatsApp account connected via QR
+ * code (unofficial, Baileys-based — see docs/adr/0005). A contact can
+ * have one conversation per channel (migration 045 widened the
+ * uniqueness from (account,contact) to (account,contact,channel)).
+ */
+export type WhatsAppChannel = 'meta_cloud_api' | 'whatsapp_personal';
+
 export interface Conversation {
   id: string;
   user_id: string;
   contact_id: string;
   status: ConversationStatus;
+  channel: WhatsAppChannel;
+  whatsapp_personal_session_id?: string | null;
+  whatsapp_remote_jid?: string | null;
+  personal_session?: {
+    id: string;
+    label?: string | null;
+    phone_number?: string | null;
+  } | null;
   assigned_agent_id?: string;
   last_message_text?: string;
   last_message_at?: string;
+  last_message_direction?: SenderType | null;
+  awaiting_reply?: boolean;
+  waiting_since?: string | null;
+  last_customer_message_at?: string | null;
+  last_team_reply_at?: string | null;
   unread_count: number;
   created_at: string;
   updated_at: string;
@@ -195,7 +315,12 @@ export interface Conversation {
 // Notifications (migration 027)
 // ============================================================
 
-export type NotificationType = 'conversation_assigned';
+export type NotificationType =
+  | 'conversation_assigned'
+  | 'contact_birthday'
+  | 'contact_reminder'
+  | 'conversation_message'
+  | 'conversation_overdue';
 
 export interface Notification {
   id: string;
@@ -209,6 +334,9 @@ export interface Notification {
   actor_user_id?: string;
   title: string;
   body?: string;
+  action_url?: string | null;
+  metadata?: Record<string, unknown>;
+  dedupe_key?: string | null;
   read_at?: string;
   created_at: string;
 }
@@ -224,7 +352,16 @@ export type ContentType =
   | 'template'
   /** Customer tapped a reply button or list row on a message we sent. */
   | 'interactive';
-export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
+export type MessageStatus =
+  | 'pending'
+  | 'queued'
+  | 'sending'
+  | 'sent'
+  | 'delivered'
+  | 'read'
+  | 'replied'
+  | 'failed'
+  | 'cancelled';
 
 export interface Message {
   id: string;
@@ -237,6 +374,22 @@ export interface Message {
   template_name?: string;
   message_id?: string;
   status: MessageStatus;
+  /** Transport used for this outbound attempt. */
+  provider?: 'meta_cloud_api' | 'whatsapp_personal' | string;
+  provider_status?: string;
+  provider_http_status?: number;
+  error_code?: string;
+  error_message?: string;
+  attempt_count?: number;
+  queued_at?: string;
+  sending_at?: string;
+  sent_at?: string;
+  delivered_at?: string;
+  read_at?: string;
+  replied_at?: string;
+  failed_at?: string;
+  cancelled_at?: string;
+  last_attempt_at?: string;
   created_at: string;
   reply_to_message_id?: string;
   /**
@@ -260,6 +413,14 @@ export interface Message {
    * badge in the inbox. Migration 033.
    */
   ai_generated?: boolean;
+  /**
+   * Set when an agent corrects a typo/mistake after sending (migration
+   * 046). On the whatsapp_personal channel this reflects a REAL
+   * WhatsApp edit (via Baileys); on meta_cloud_api it's a CRM-only
+   * correction — Meta's Cloud API has no message-edit endpoint, so the
+   * customer's copy is unchanged. The UI must not conflate the two.
+   */
+  edited_at?: string;
 }
 
 export type ReactionActor = 'customer' | 'agent';
@@ -293,6 +454,41 @@ export interface WhatsAppConfig {
   subscribed_apps_at?: string;
   /** Last error from /register; cleared on success. */
   last_registration_error?: string;
+}
+
+// ============================================================
+// Personal WhatsApp (QR code, unofficial) — migration 045
+// ============================================================
+
+export type WhatsAppPersonalStatus =
+  'disconnected' | 'connecting' | 'qr_pending' | 'connected' | 'error';
+
+export type WhatsAppPersonalHistorySyncStatus =
+  'idle' | 'pending' | 'syncing' | 'completed' | 'paused' | 'error';
+
+export interface WhatsAppPersonalSession {
+  id: string;
+  account_id: string;
+  user_id: string;
+  status: WhatsAppPersonalStatus;
+  phone_number?: string;
+  last_error?: string;
+  connected_at?: string;
+  history_sync_status?: WhatsAppPersonalHistorySyncStatus;
+  history_sync_progress?: number;
+  history_sync_chats?: number;
+  history_sync_messages?: number;
+  history_sync_error?: string;
+  /**
+   * Traffic module client (contacts.id) this connection is dedicated
+   * to, if any — set in Settings so a lead landing here without a
+   * resolvable ad referral is still attributed to the right client
+   * (see src/lib/traffic/attribution.ts). Null for connections not
+   * tied to one specific client's campaigns.
+   */
+  client_contact_id?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // Raw Meta status enum. We persist this verbatim from Meta (sync + webhook)
@@ -371,7 +567,7 @@ export interface Deal {
    * contact is deleted (ON DELETE SET NULL). History preserved.
    */
   contact_id: string | null;
-  conversation_id?: string;
+  conversation_id?: string | null;
   assigned_to?: string;
   title: string;
   value: number;
@@ -384,10 +580,34 @@ export interface Deal {
   contact?: Contact;
   stage?: PipelineStage;
   assignee?: Profile;
+  tags?: Tag[];
+  conversation?: Pick<
+    Conversation,
+    | 'id'
+    | 'channel'
+    | 'status'
+    | 'last_message_text'
+    | 'last_message_at'
+    | 'last_message_direction'
+    | 'unread_count'
+    | 'awaiting_reply'
+    | 'waiting_since'
+    | 'last_customer_message_at'
+    | 'last_team_reply_at'
+  > | null;
 }
 
-export type BroadcastStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
-export type RecipientStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'replied' | 'failed';
+export interface PipelineReplySettings {
+  newMinutes: number;
+  attentionMinutes: number;
+  overdueMinutes: number;
+  messageNotifications: boolean;
+}
+
+export type BroadcastStatus =
+  'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
+export type RecipientStatus =
+  'pending' | 'sent' | 'delivered' | 'read' | 'replied' | 'failed';
 
 export interface Broadcast {
   id: string;
@@ -450,6 +670,7 @@ export type AutomationTriggerType =
   | 'interactive_reply';
 
 export type AutomationStepType =
+  | 'sales_qualify'
   | 'send_message'
   | 'send_buttons'
   | 'send_list'
@@ -507,6 +728,10 @@ export interface SendMessageStepConfig {
   text: string;
 }
 
+export interface SalesQualifyStepConfig {
+  mode: 'suggestion';
+}
+
 /**
  * `send_buttons` / `send_list` step configs carry the full interactive
  * payload (same shape stored on messages + quick replies). `kind` is
@@ -556,10 +781,7 @@ export interface WaitStepConfig {
 }
 
 export type ConditionSubject =
-  | 'contact_field'
-  | 'tag_presence'
-  | 'message_content'
-  | 'time_of_day';
+  'contact_field' | 'tag_presence' | 'message_content' | 'time_of_day';
 
 export interface ConditionStepConfig {
   subject: ConditionSubject;
@@ -576,6 +798,7 @@ export interface SendWebhookStepConfig {
 }
 
 export type AutomationStepConfig =
+  | SalesQualifyStepConfig
   | SendMessageStepConfig
   | SendButtonsStepConfig
   | SendListStepConfig
@@ -659,6 +882,363 @@ export interface QuickReply {
   content_text?: string | null;
   /** Set when `kind === 'interactive'`. */
   interactive_payload?: InteractiveMessagePayload | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================
+// Content & social media (migration 042) — social_profiles,
+// content_posts, content_post_targets. A "client" here is an
+// existing Contact; no separate client entity was introduced.
+// ============================================================
+
+export type SocialPlatform = 'instagram' | 'facebook' | 'linkedin';
+export type SocialConnectionStatus = 'not_connected' | 'connected' | 'error';
+
+export interface SocialProfile {
+  id: string;
+  account_id: string;
+  contact_id: string;
+  user_id: string;
+  platform: SocialPlatform;
+  handle: string;
+  display_name?: string | null;
+  connection_status: SocialConnectionStatus;
+  external_account_id?: string | null;
+  /** AES-256-GCM ciphertext (src/lib/whatsapp/encryption.ts). Never
+   *  decrypted client-side — omitted from any client-facing select. */
+  access_token_encrypted?: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  /** Hydrated by queries that embed contacts(*) (e.g. the social
+   *  profiles list grouped by client). Absent otherwise. */
+  contact?: Contact;
+}
+
+/** Distinct from the WhatsApp-message `ContentType` above — this is the
+ *  kind of social-media post being created, not an inbound/outbound
+ *  message's payload type. */
+export type PostContentType =
+  'image' | 'video' | 'carousel' | 'text' | 'story' | 'reel';
+
+export type ContentPostStatus =
+  | 'draft'
+  | 'pending_approval'
+  | 'approved'
+  | 'scheduled'
+  | 'publishing'
+  | 'published'
+  | 'failed'
+  | 'cancelled';
+
+export interface ContentMediaItem {
+  url: string;
+  path: string;
+  kind: 'image' | 'video';
+  position: number;
+}
+
+export interface ContentPost {
+  id: string;
+  account_id: string;
+  contact_id: string;
+  created_by: string;
+  content_type: PostContentType;
+  caption?: string | null;
+  hashtags: string[];
+  media: ContentMediaItem[];
+  link_url?: string | null;
+  cta?: string | null;
+  status: ContentPostStatus;
+  scheduled_at?: string | null;
+  published_at?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Hydrated by queries that embed contacts(*) / content_post_targets(*). */
+  contact?: Contact;
+  targets?: ContentPostTarget[];
+}
+
+export type ContentPostTargetStatus =
+  'pending' | 'publishing' | 'published' | 'failed';
+
+export interface ContentPostTarget {
+  id: string;
+  post_id: string;
+  social_profile_id: string;
+  status: ContentPostTargetStatus;
+  external_post_id?: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+  attempted_at?: string | null;
+  published_at?: string | null;
+  created_at: string;
+  /** Hydrated by queries that embed social_profiles(*). */
+  social_profile?: SocialProfile;
+}
+
+export type ContentReferenceStatus =
+  'idea' | 'analyze' | 'reference' | 'created' | 'archived';
+
+export interface ContentReference {
+  id: string;
+  account_id: string;
+  contact_id?: string | null;
+  created_by: string;
+  source_url: string;
+  platform: string;
+  title: string;
+  description?: string | null;
+  thumbnail_url?: string | null;
+  author?: string | null;
+  published_at?: string | null;
+  public_text?: string | null;
+  category?: string | null;
+  topic?: string | null;
+  content_format?: string | null;
+  notes?: string | null;
+  status: ContentReferenceStatus;
+  is_favorite: boolean;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  contact?: Pick<Contact, 'id' | 'name'> | null;
+  reference_tags?: Array<{ tag: ContentTag }>;
+  reference_collections?: Array<{ collection: ContentCollection }>;
+}
+
+export interface ContentCollection {
+  id: string;
+  account_id: string;
+  created_by: string;
+  name: string;
+  description?: string | null;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContentTag {
+  id: string;
+  account_id: string;
+  created_by: string;
+  name: string;
+  color: string;
+  created_at: string;
+}
+
+export interface ContentIdea {
+  id: string;
+  account_id: string;
+  contact_id?: string | null;
+  created_by: string;
+  body: string;
+  source_url?: string | null;
+  asset_url?: string | null;
+  kind: 'text' | 'url' | 'image' | 'note' | 'reference';
+  status: 'inbox' | 'organized' | 'archived';
+  reference_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  contact?: Pick<Contact, 'id' | 'name'> | null;
+}
+
+// ============================================================
+// Traffic & Performance (migration 044) — ad_accounts, ad_campaigns,
+// ad_sets, ads, landing_pages, traffic_metrics_daily,
+// traffic_recommendations, traffic_optimization_tasks,
+// traffic_optimization_log. "Client" is a Contact, same decision as
+// the Content module. The commercial funnel (Lead -> ... -> Venda) is
+// NOT modeled here — it's `deals` moving through `pipeline_stages`.
+// ============================================================
+
+export type AdPlatform = 'meta' | 'google' | 'other';
+export type AdConnectionStatus = 'not_connected' | 'connected' | 'error';
+
+export interface AdAccount {
+  id: string;
+  account_id: string;
+  contact_id: string;
+  user_id: string;
+  platform: AdPlatform;
+  name: string;
+  connection_status: AdConnectionStatus;
+  external_account_id?: string | null;
+  /** AES-256-GCM ciphertext — never decrypted client-side. */
+  access_token_encrypted?: string | null;
+  currency: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  contact?: Contact;
+}
+
+export type AdEntityStatus = 'active' | 'paused' | 'ended' | 'draft';
+
+export interface AdCampaign {
+  id: string;
+  ad_account_id: string;
+  external_id?: string | null;
+  name: string;
+  objective?: string | null;
+  status: AdEntityStatus;
+  budget?: number | null;
+  budget_type?: 'daily' | 'lifetime' | null;
+  currency: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  created_at: string;
+  updated_at: string;
+  ad_account?: AdAccount;
+}
+
+export interface AdSet {
+  id: string;
+  campaign_id: string;
+  external_id?: string | null;
+  name: string;
+  targeting_summary?: string | null;
+  budget?: number | null;
+  status: AdEntityStatus;
+  created_at: string;
+  updated_at: string;
+  campaign?: AdCampaign;
+}
+
+export interface Ad {
+  id: string;
+  ad_set_id: string;
+  external_id?: string | null;
+  name: string;
+  headline?: string | null;
+  body?: string | null;
+  media_url?: string | null;
+  thumbnail_url?: string | null;
+  cta?: string | null;
+  landing_page_id?: string | null;
+  status: AdEntityStatus;
+  /** Feeds "days active" in the deterministic creative-fatigue score. */
+  launched_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  ad_set?: AdSet;
+}
+
+export interface LandingPage {
+  id: string;
+  account_id: string;
+  contact_id: string;
+  name: string;
+  url: string;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  contact?: Contact;
+}
+
+export type TrafficEntityType =
+  'ad_account' | 'campaign' | 'ad_set' | 'ad' | 'landing_page';
+export type TrafficMetricsSource = 'manual' | 'csv_import' | 'api';
+
+export interface TrafficMetricsDaily {
+  id: string;
+  account_id: string;
+  entity_type: TrafficEntityType;
+  entity_id: string;
+  date: string;
+  impressions: number;
+  reach: number;
+  clicks: number;
+  spend: number;
+  leads: number;
+  conversions: number;
+  revenue: number;
+  visits: number;
+  source: TrafficMetricsSource;
+  created_by?: string | null;
+  created_at: string;
+}
+
+export type RecommendationEntityType = TrafficEntityType | 'funnel';
+export type RecommendationCategory =
+  'creative_fatigue' | 'landing_page' | 'funnel' | 'budget' | 'alert';
+export type RecommendationPriority = 'critical' | 'high' | 'medium' | 'low';
+export type RecommendationStatus =
+  'new' | 'in_review' | 'approved' | 'in_progress' | 'done' | 'dismissed';
+
+export interface TrafficRecommendation {
+  id: string;
+  account_id: string;
+  contact_id: string;
+  entity_type?: RecommendationEntityType | null;
+  entity_id?: string | null;
+  category: RecommendationCategory;
+  priority: RecommendationPriority;
+  status: RecommendationStatus;
+  problem: string;
+  diagnosis: string;
+  recommended_action: string;
+  expected_impact?: string | null;
+  ai_raw?: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+  contact?: Contact;
+}
+
+export type OptimizationTaskStatus =
+  'todo' | 'in_progress' | 'done' | 'cancelled';
+
+export interface TrafficOptimizationTask {
+  id: string;
+  account_id: string;
+  contact_id: string;
+  recommendation_id?: string | null;
+  title: string;
+  responsible?: string | null;
+  due_date?: string | null;
+  priority: RecommendationPriority;
+  status: OptimizationTaskStatus;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  contact?: Contact;
+  recommendation?: TrafficRecommendation;
+}
+
+export interface TrafficOptimizationLogEntry {
+  id: string;
+  account_id: string;
+  contact_id: string;
+  task_id?: string | null;
+  recommendation_id?: string | null;
+  event: string;
+  detail?: string | null;
+  actor?: string | null;
+  created_at: string;
+}
+
+export type SalesTaskType = 'task' | 'call' | 'meeting' | 'follow_up';
+export type SalesTaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled';
+export type SalesTaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+export interface SalesTask {
+  id: string;
+  account_id: string;
+  title: string;
+  description?: string | null;
+  task_type: SalesTaskType;
+  status: SalesTaskStatus;
+  priority: SalesTaskPriority;
+  due_at?: string | null;
+  completed_at?: string | null;
+  contact_id?: string | null;
+  deal_id?: string | null;
+  assigned_to: string;
+  created_by: string;
   created_at: string;
   updated_at: string;
 }

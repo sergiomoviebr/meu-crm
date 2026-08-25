@@ -184,9 +184,7 @@ export async function setContactTags(
   if (readErr) {
     throw new ContactError('Failed to read contact tags', 500);
   }
-  const existing = new Set(
-    (current ?? []).map((r) => r.tag_id as string)
-  );
+  const existing = new Set((current ?? []).map((r) => r.tag_id as string));
 
   const toAdd = [...desired].filter((id) => !existing.has(id));
   const toRemove = [...existing].filter((id) => !desired.has(id));
@@ -228,6 +226,7 @@ export async function getContactById(
     .eq('id', contactId)
     .eq('account_id', accountId)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error || !data || (data as Record<string, unknown>).deleted_at)
+    return null;
   return serializeContact(data as Record<string, unknown>);
 }

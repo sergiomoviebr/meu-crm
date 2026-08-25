@@ -10,6 +10,7 @@ export type TemplateSlug =
   | 'out_of_office'
   | 'lead_qualifier'
   | 'follow_up_reminder'
+  | 'smart_sales_qualification'
 
 export interface TemplateStepSeed {
   step_type: AutomationStepType
@@ -124,6 +125,14 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
         },
       },
     ],
+  },
+  smart_sales_qualification: {
+    slug: 'smart_sales_qualification',
+    name: 'Qualificação Comercial Inteligente',
+    description: 'Analisa a resposta do lead depois do seu primeiro contato e sugere o próximo passo sem enviar automaticamente.',
+    trigger_type: 'first_inbound_message',
+    trigger_config: {},
+    steps: [{ step_type: 'sales_qualify', step_config: { mode: 'suggestion' } }],
   },
 }
 

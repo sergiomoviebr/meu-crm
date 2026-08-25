@@ -20,11 +20,34 @@
     "inbox": "인박스",
     "notifications": "알림",
     "contacts": "연락처",
+    "tasks": "작업 및 일정",
     "pipelines": "파이프라인",
     "broadcasts": "브로드캐스트",
     "automations": "자동화",
     "flows": "플로우",
     "aiAgents": "AI 에이전트",
+    "contentSocial": "콘텐츠",
+    "contentDashboard": "콘텐츠 대시보드",
+    "contentSwipeFile": "스와이프 파일",
+    "contentIdeas": "아이디어 보관함",
+    "contentProduction": "제작",
+    "contentCreate": "콘텐츠 만들기",
+    "contentCalendar": "편집 캘린더",
+    "contentScheduled": "예약됨",
+    "contentPublished": "게시됨",
+    "contentDrafts": "임시 저장",
+    "contentSocialProfiles": "소셜 네트워크",
+    "contentClients": "고객/프로필",
+    "trafficPerformance": "트래픽 & 퍼포먼스",
+    "trafficDashboard": "트래픽 대시보드",
+    "trafficAccounts": "광고 계정",
+    "trafficMetrics": "지표",
+    "trafficLandingPages": "랜딩 페이지",
+    "trafficDiagnostics": "AI 진단",
+    "trafficRecommendations": "AI 추천",
+    "trafficAlerts": "알림",
+    "trafficOptimizationPlan": "최적화 계획",
+    "trafficReports": "리포트",
     "settings": "설정",
     "beta": "베타",
     "unreadConversations": "읽지 않은 대화 {count}건",
@@ -137,9 +160,13 @@
       "whatsappNotConnected": "WhatsApp®이 연결되어 있지 않습니다. 설정으로 이동해 계정을 연결하세요."
     },
     "conversationList": {
+      "title": "대화",
+      "subtitle": "WhatsApp 고객 응대",
       "searchPlaceholder": "대화 검색...",
       "filterAll": "전체",
       "filterUnread": "읽지 않음",
+      "filterAwaitingReply": "내 답변 대기 중",
+      "filterAwaitingCustomer": "고객 답변 대기 중",
       "filterOpen": "열림",
       "filterPending": "대기 중",
       "filterClosed": "닫힘",
@@ -151,7 +178,33 @@
       "clearAll": "모두 지우기",
       "noConversations": "대화를 찾을 수 없습니다",
       "noMessagesYet": "아직 메시지가 없습니다",
-      "unknown": "알 수 없음"
+      "unknown": "알 수 없음",
+      "personalChannel": "개인 WhatsApp으로 연결됨"
+    },
+    "newConversation": {
+      "trigger": "새 대화",
+      "title": "새 대화 열기",
+      "description": "연락처 또는 전화번호를 선택하고 응대에 사용할 WhatsApp 번호를 선택하세요.",
+      "recipient": "연락처 또는 전화번호",
+      "searchPlaceholder": "이름, 회사 또는 전체 전화번호 검색",
+      "usePhone": "{phone} 번호로 대화",
+      "noResults": "연락처를 찾을 수 없습니다. 새 연락처를 만들려면 전체 번호를 입력하세요.",
+      "noContacts": "아직 등록된 연락처가 없습니다.",
+      "nameLabel": "새 연락처 이름 (선택 사항)",
+      "namePlaceholder": "이 연락처를 어떻게 표시할까요?",
+      "channel": "전송 경로",
+      "loadingChannels": "연결된 번호를 불러오는 중…",
+      "noChannels": "대화를 시작할 수 있는 WhatsApp 연결이 없습니다.",
+      "openSettings": "설정에서 연결",
+      "official": "공식 API",
+      "personal": "개인 WhatsApp",
+      "cancel": "취소",
+      "open": "대화 열기",
+      "opening": "여는 중…",
+      "opened": "대화를 열었습니다",
+      "loadFailed": "새 대화 데이터를 불러올 수 없습니다.",
+      "openFailed": "대화를 열 수 없습니다.",
+      "gateReason": "대화 시작"
     },
     "messageThread": {
       "backToConversations": "대화 목록으로 돌아가기",
@@ -183,7 +236,23 @@
       "aiSummaryNotConfigured": "AI가 아직 설정되지 않았습니다 — 설정 → AI 어시스턴트에서 활성화하세요.",
       "aiSummaryFailed": "이 대화를 요약할 수 없습니다.",
       "aiSummarySaveFailed": "요약을 메모로 저장할 수 없습니다.",
-      "aiSummarySaved": "요약이 메모로 저장되었습니다."
+      "aiSummarySaved": "요약이 메모로 저장되었습니다.",
+      "deleteConversation": "대화 삭제",
+      "searchMessages": "이 대화 검색",
+      "searchMessagesPlaceholder": "이 대화에서 메시지 검색...",
+      "searchResults": "결과 {count}개",
+      "closeSearch": "검색 닫기",
+      "noSearchResults": "이 대화에서 메시지를 찾을 수 없습니다.",
+      "deleteConversationGateReason": "대화 삭제",
+      "deleteConversationConfirm": "이 대화와 모든 메시지를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+      "conversationDeleted": "대화가 삭제되었습니다",
+      "editMessage": "메시지 수정",
+      "editMessageHint": "개인 WhatsApp에서는 (WhatsApp 자체의 수정 가능 시간 내에서) 고객에게 보이는 메시지도 수정을 시도합니다. 공식 API에서는 CRM의 기록만 수정됩니다 — 고객은 이미 원본 텍스트를 받았습니다.",
+      "editCancel": "취소",
+      "editSave": "저장",
+      "editFailed": "메시지를 수정할 수 없습니다",
+      "editedOnWhatsapp": "WhatsApp에서 메시지가 수정되었습니다",
+      "editedLocalOnly": "CRM에서만 수정됨 — 고객은 이미 원본 텍스트를 받았습니다"
     },
     "sessionTimer": {
       "expired": "만료됨",
@@ -193,7 +262,11 @@
     },
     "composer": {
       "draftHint": "✨를 눌러 AI로 답장 초안을 작성하세요 — 보내기 전에 수정할 수 있습니다",
-      "sessionExpiredHint": "24시간 세션이 만료되었습니다. 다시 연결하려면 템플릿을 사용하세요.",
+      "sessionExpiredHint": "대화를 계속하려면 WhatsApp 승인 메시지가 필요합니다.",
+      "continueConversation": "대화 계속하기",
+      "approvedTemplateRequired": "고객 상담을 다시 시작하려면 WhatsApp 승인 메시지가 필요합니다.",
+      "selectApprovedMessage": "메시지 선택",
+      "continueConversationPlaceholder": "계속하려면 승인된 메시지를 선택하세요",
       "templates": "템플릿",
       "readOnlyPlaceholder": "읽기 전용 — 뷰어는 열람만 가능하고 답장할 수 없습니다",
       "sessionExpiredPlaceholder": "세션 만료 - 템플릿을 사용하세요",
@@ -247,7 +320,8 @@
       "downloadFailed": "첨부파일을 다운로드할 수 없습니다",
       "viewImage": "이미지 보기",
       "expandVideo": "동영상 확대",
-      "imageAlt": "공유된 이미지"
+      "imageAlt": "공유된 이미지",
+      "edited": "수정됨"
     },
     "mediaViewer": {
       "counter": "{total}개 중 {index}번째",
@@ -266,6 +340,7 @@
       "reply": "답장",
       "copyText": "텍스트 복사",
       "delete": "삭제",
+      "edit": "수정",
       "react": "반응 남기기",
       "reactWith": "{emoji}(으)로 반응하기",
       "nothingToCopy": "복사할 내용이 없습니다",
@@ -405,6 +480,8 @@
         "notes": "메모",
         "custom": "커스텀 필드",
         "deals": "딜",
+        "content": "콘텐츠",
+        "traffic": "트래픽",
         "tags": "태그",
         "noTags": "태그 없음",
         "noDeals": "딜 없음",
@@ -439,6 +516,31 @@
       },
       "dealsTab": {
         "noDeals": "아직 딜이 없습니다"
+      },
+      "contentTab": {
+        "socialProfiles": "소셜 프로필",
+        "noProfiles": "연결된 프로필이 없습니다",
+        "recentPosts": "최근 콘텐츠",
+        "noPosts": "아직 콘텐츠가 없습니다",
+        "noCaption": "캡션 없음",
+        "status": {
+          "draft": "임시 저장",
+          "pending_approval": "승인 대기",
+          "approved": "승인됨",
+          "scheduled": "예약됨",
+          "publishing": "게시 중",
+          "published": "게시됨",
+          "failed": "실패",
+          "cancelled": "취소됨"
+        }
+      },
+      "trafficTab": {
+        "adAccounts": "광고 계정",
+        "noAdAccounts": "연결된 광고 계정이 없습니다",
+        "recentRecommendations": "최근 AI 추천",
+        "noRecommendations": "아직 추천이 없습니다",
+        "history": "최적화 이력",
+        "noHistory": "아직 기록된 이벤트가 없습니다"
       },
       "tagsTab": {
         "clickTagDesc": "태그를 클릭해 이 연락처에 추가하거나 제거하세요.",
@@ -711,6 +813,7 @@
       "title": "새 브로드캐스트",
       "subtitle": "연락처에 보낼 브로드캐스트 메시지를 만듭니다.",
       "steps": {
+        "sales_qualify": "영업 응답 분류",
         "template": "템플릿",
         "audience": "대상",
         "personalize": "개인화",
@@ -1025,7 +1128,8 @@
         "matchWord": "단어 단위 일치",
         "matchWordHint": "키워드가 독립된 단어일 때만 일치하므로 \"k\"가 \"thanks\"에서 실행되지 않습니다. 공백으로 단어를 구분하는 언어의 짧은 키워드에 적합하며, 공백 없이 표기하는 언어에는 \"포함\"을 사용하세요.",
         "matchExact": "정확히 일치",
-        "closeConversationHint": "대화 상태를 \"닫힘\"으로 설정합니다. 추가 설정이 필요 없습니다."
+        "closeConversationHint": "대화 상태를 \"닫힘\"으로 설정합니다. 추가 설정이 필요 없습니다.",
+        "salesQualifyHint": "리드 응답을 분석하고 의도, 점수, 온도를 업데이트한 뒤 답변 초안을 만듭니다. 메시지는 자동 전송하지 않습니다."
       }
     }
   },
@@ -1283,6 +1387,7 @@
       "unnamed": "이름 없음",
       "joined": "{date} 참여",
       "remove": "제거",
+      "newQr": "새 QR 생성",
       "removedToast": "{name}을(를) 제거했습니다",
       "updatedToast": "{name}을(를) {role}(으)로 변경했습니다",
       "pendingInvitations": "대기 중인 초대",
@@ -1491,6 +1596,15 @@
       "notConnected": "연결되지 않음",
       "connectedDesc": "액세스 토큰으로 Meta 인증이 완료되었습니다. 웹훅이 실제로 연결되었는지는 아래 등록 상태를 확인하세요.",
       "notConnectedDesc": "아래에서 Meta API 자격 증명을 설정해 WhatsApp 비즈니스 계정을 연결하세요.",
+      "embeddedSignupTitle": "Meta로 연결",
+      "embeddedSignupDescription": "한 번의 클릭으로 — ID나 토큰을 직접 입력하지 않고 WhatsApp Business를 연결하세요.",
+      "embeddedSignupConnect": "Meta로 연결",
+      "embeddedSignupConnecting": "연결 중...",
+      "embeddedSignupNotConfigured": "이 서버에는 아직 원클릭 연결이 설정되지 않았습니다.",
+      "embeddedSignupCancelled": "연결이 취소되었습니다",
+      "embeddedSignupMissingWaba": "Meta가 계정 정보를 반환하지 않았습니다 — 다시 시도하세요.",
+      "embeddedSignupFailed": "Meta 연결에 실패했습니다",
+      "embeddedSignupSuccess": "WhatsApp이 성공적으로 연결되었습니다",
       "registered": "등록됨 — Meta가 wacrm으로 이벤트를 전달합니다",
       "notRegistered": "등록되지 않음 — Meta가 이벤트를 전달하지 않습니다",
       "verifyWithMeta": "Meta로 확인",
@@ -1547,12 +1661,55 @@
       "step4_5": "\"messages\" 웹훅 필드를 구독",
       "metaDocs": "Meta WhatsApp API 문서"
     },
+    "whatsappPersonal": {
+      "multiDescription": "여러 WhatsApp 번호를 연결하고 관리합니다. 각 대화는 수신한 번호에 연결됩니다.",
+      "connectionsTitle": "연결된 번호",
+      "connectionsDescription": "각 번호는 독립적인 QR 코드, 세션 및 기록을 가집니다.",
+      "addConnection": "WhatsApp 추가",
+      "defaultBadge": "기본",
+      "emptyTitle": "연결된 WhatsApp 없음",
+      "emptyDescription": "첫 번째 번호를 추가하여 QR 코드를 생성하세요.",
+      "remove": "제거",
+      "title": "개인 WhatsApp (QR 코드)",
+      "description": "WhatsApp Web처럼 QR 코드를 스캔해서 개인 WhatsApp을 연결하면, 이 받은편지함에서 해당 대화를 볼 수 있습니다.",
+      "riskTitle": "공식 WhatsApp Business API가 아닙니다",
+      "riskDescription": "이 연결은 WhatsApp Web 프로토콜을 자동화하는 비공식 라이브러리를 사용합니다. WhatsApp 서비스 약관을 위반하며, 번호가 실제로 차단될 위험이 있습니다. 본인 책임하에 연결하세요.",
+      "connect": "연결",
+      "connecting": "연결 중...",
+      "disconnect": "연결 해제",
+      "disconnecting": "연결 해제 중...",
+      "connectedTitle": "연결됨",
+      "disconnectedTitle": "연결되지 않음",
+      "disconnectedDesc": "연결을 클릭해 QR 코드를 생성하고 휴대폰의 WhatsApp으로 스캔하세요.",
+      "qrAlt": "개인 WhatsApp 연결용 QR 코드",
+      "scanHint": "휴대폰에서 WhatsApp 열기 → 설정 → 연결된 기기 → 기기 연결, 그리고 이 코드를 스캔하세요.",
+      "gateReason": "개인 WhatsApp 관리",
+      "importHistory": "대화 가져오기",
+      "historyNeedsReconnect": "휴대전화의 기존 대화를 가져오려면 새 QR 코드로 기록을 가져오세요.",
+      "historyPending": "휴대전화가 동기화를 시작하기를 기다리는 중…",
+      "historySyncing": "대화와 메시지를 가져오는 중…",
+      "historyCompleted": "기록 동기화 완료: 대화 {chats}개, 메시지 {messages}개를 가져왔습니다.",
+      "historyPaused": "WhatsApp에서 동기화를 일시 중지했습니다. 다시 시도할 수 있습니다.",
+      "clientLabel": "유료 트래픽 고객",
+      "clientPlaceholder": "연결된 고객 없음",
+      "clientHint": "광고 출처를 식별할 수 없는 경우, 이 번호로 들어오는 리드는 이 고객에게 귀속됩니다.",
+      "toasts": {
+        "connectFailed": "연결을 시작할 수 없습니다",
+        "disconnectFailed": "연결을 해제할 수 없습니다",
+        "disconnected": "개인 WhatsApp 연결이 해제되었습니다",
+        "removeFailed": "연결을 제거할 수 없습니다",
+        "removed": "연결이 제거되었습니다",
+        "clientLinked": "고객이 연결에 연결되었습니다",
+        "clientLinkFailed": "고객을 연결할 수 없습니다"
+      }
+    },
     "sections": {
       "overview": "개요",
       "profile": "내 프로필",
       "security": "로그인 & 보안",
       "appearance": "화면 설정",
       "whatsapp": "WhatsApp",
+      "whatsapp-personal": "개인 WhatsApp",
       "templates": "템플릿",
       "quick-replies": "빠른 답장",
       "fields": "필드 & 태그",
@@ -1746,6 +1903,539 @@
       "reindex": "재색인",
       "reindexTooltip": "모든 문서를 다시 임베딩합니다 (예: 임베딩 키 추가 후)",
       "loading": "불러오는 중…"
+    }
+  },
+  "Content": {
+    "dashboard": {
+      "title": "콘텐츠 대시보드",
+      "subtitle": "모든 고객의 콘텐츠 현황 개요",
+      "newPost": "새 콘텐츠",
+      "tiles": {
+        "draft": "임시 저장",
+        "scheduled": "예약됨",
+        "publishedThisMonth": "이번 달 게시됨",
+        "failed": "실패"
+      },
+      "chart": {
+        "title": "상태별 콘텐츠",
+        "category": "건수"
+      },
+      "statusShort": {
+        "draft": "임시 저장",
+        "pending_approval": "승인 대기",
+        "approved": "승인됨",
+        "scheduled": "예약됨",
+        "publishing": "게시 중",
+        "published": "게시됨",
+        "failed": "실패",
+        "cancelled": "취소됨"
+      }
+    },
+    "form": {
+      "createTitle": "콘텐츠 만들기",
+      "editTitle": "콘텐츠 편집",
+      "subtitle": "게시물을 만들고 고객, 대상 네트워크, 일정을 선택하세요.",
+      "client": "고객",
+      "clientPlaceholder": "고객 선택",
+      "targetProfiles": "대상 네트워크",
+      "noProfiles": "이 고객에게 연결된 소셜 프로필이 없습니다.",
+      "contentType": "콘텐츠 유형",
+      "contentTypes": {
+        "image": "이미지",
+        "video": "동영상",
+        "carousel": "캐러셀",
+        "text": "텍스트",
+        "story": "스토리",
+        "reel": "릴스"
+      },
+      "caption": "캡션",
+      "hashtags": "해시태그",
+      "media": "이미지 및 동영상",
+      "linkUrl": "링크",
+      "cta": "행동 유도(CTA)",
+      "ctaPlaceholder": "예: 더 알아보기",
+      "scheduleAt": "예약 일시",
+      "actions": {
+        "saveDraft": "임시 저장",
+        "submitForApproval": "승인 요청",
+        "schedule": "예약",
+        "publishNow": "지금 게시"
+      },
+      "errors": {
+        "missingClient": "고객을 선택하세요",
+        "missingProfiles": "대상 네트워크를 하나 이상 선택하세요",
+        "missingSchedule": "예약할 날짜와 시간을 선택하세요",
+        "saveFailed": "콘텐츠 저장에 실패했습니다",
+        "actionFailed": "작업을 수행하지 못했습니다",
+        "fileTooLarge": "파일이 너무 큽니다: {name}",
+        "uploadFailed": "파일 업로드에 실패했습니다"
+      },
+      "toasts": {
+        "savedDraft": "임시 저장되었습니다",
+        "submitted": "승인 요청되었습니다",
+        "scheduled": "콘텐츠가 예약되었습니다",
+        "publishing": "게시가 시작되었습니다"
+      }
+    },
+    "posts": {
+      "title": "게시물",
+      "subtitle": "임시 저장, 승인, 예약, 게시를 관리하세요",
+      "new": "새 콘텐츠",
+      "gateReason": "콘텐츠 관리",
+      "empty": "이 상태의 콘텐츠가 없습니다.",
+      "noCaption": "캡션 없음",
+      "columns": {
+        "client": "고객",
+        "caption": "캡션",
+        "status": "상태",
+        "updated": "수정됨"
+      },
+      "status": {
+        "draft": "임시 저장",
+        "pending_approval": "승인 대기",
+        "approved": "승인됨",
+        "scheduled": "예약됨",
+        "publishing": "게시 중",
+        "published": "게시됨",
+        "failed": "실패",
+        "cancelled": "취소됨"
+      },
+      "actions": {
+        "publishNow": "지금 게시"
+      },
+      "toasts": {
+        "actionFailed": "작업을 수행하지 못했습니다",
+        "duplicated": "콘텐츠가 복제되었습니다",
+        "approved": "콘텐츠가 승인되었습니다",
+        "publishing": "게시가 시작되었습니다",
+        "cancelled": "콘텐츠가 취소되었습니다"
+      }
+    },
+    "calendar": {
+      "title": "편집 캘린더",
+      "subtitle": "일간, 주간, 월간으로 게시물을 확인하세요",
+      "newPost": "새 콘텐츠",
+      "today": "오늘",
+      "views": {
+        "day": "일",
+        "week": "주",
+        "month": "월"
+      },
+      "moreCount": "+{count}건 더보기",
+      "untitled": "제목 없음",
+      "noPostsThisDay": "이 날에는 게시물이 없습니다.",
+      "status": {
+        "draft": "임시 저장",
+        "pending_approval": "승인 대기",
+        "approved": "승인됨",
+        "scheduled": "예약됨",
+        "publishing": "게시 중",
+        "published": "게시됨",
+        "failed": "실패",
+        "cancelled": "취소됨"
+      }
+    },
+    "socialProfiles": {
+      "title": "소셜 네트워크",
+      "subtitle": "등록된 고객에 연결된 소셜 미디어 프로필",
+      "new": "새 프로필",
+      "gateReason": "소셜 프로필 관리",
+      "groupByPlatform": "네트워크별로 그룹화",
+      "groupByClient": "고객별로 그룹화",
+      "empty": "아직 등록된 프로필이 없습니다.",
+      "unknownClient": "알 수 없는 고객",
+      "columns": {
+        "client": "고객",
+        "platform": "네트워크",
+        "handle": "계정/페이지",
+        "status": "상태"
+      },
+      "connectionStatus": {
+        "not_connected": "연결되지 않음",
+        "connected": "연결됨",
+        "error": "오류"
+      },
+      "dialog": {
+        "title": "새 소셜 프로필",
+        "description": "기존 고객에게 소셜 미디어 프로필을 연결합니다.",
+        "client": "고객",
+        "clientPlaceholder": "고객 선택",
+        "platform": "네트워크",
+        "handle": "계정/페이지",
+        "displayName": "표시 이름",
+        "cancel": "취소",
+        "save": "저장",
+        "connectWithMeta": "Meta로 연결",
+        "connectWithMetaHint": "한 번의 클릭으로 페이지/Instagram 계정 중에서 선택하세요 — 입력할 필요가 없습니다.",
+        "connectWithMetaNeedsClient": "Meta로 연결하려면 위에서 고객을 선택하세요."
+      },
+      "deleteDialog": {
+        "title": "프로필 제거",
+        "description": "이 소셜 프로필을 제거하시겠습니까? 이미 게시된 콘텐츠에는 영향을 주지 않습니다.",
+        "confirm": "제거"
+      },
+      "toasts": {
+        "missingFields": "고객과 계정/페이지를 입력하세요",
+        "createError": "프로필 생성에 실패했습니다",
+        "created": "프로필이 생성되었습니다",
+        "deleteError": "프로필 제거에 실패했습니다",
+        "deleted": "프로필이 제거되었습니다",
+        "oauthConnected": "Meta 연결에 성공했습니다",
+        "oauthNoPages": "이 Meta 계정에서 Facebook 페이지를 찾을 수 없습니다",
+        "oauthDenied": "연결이 취소되었습니다",
+        "oauthError": "Meta 연결에 실패했습니다"
+      }
+    }
+  },
+  "MetaOAuth": {
+    "picker": {
+      "title": "계정 선택",
+      "description": "Meta 계정에서 두 개 이상의 옵션을 찾았습니다. 연결할 항목을 선택하세요.",
+      "empty": "옵션을 찾을 수 없습니다.",
+      "loadFailed": "옵션을 불러올 수 없습니다",
+      "finalizeFailed": "연결을 완료할 수 없습니다",
+      "connected": "성공적으로 연결되었습니다"
+    }
+  },
+  "Traffic": {
+    "dashboard": {
+      "title": "트래픽 & 퍼포먼스",
+      "subtitle": "모든 고객의 현황과 빠른 진단",
+      "gateReason": "트래픽 관리",
+      "runDiagnostics": "진단 실행",
+      "running": "분석 중…",
+      "tiles": {
+        "spend": "투자 금액 (7일)",
+        "leads": "리드 (7일)",
+        "clicks": "클릭 (7일)",
+        "impressions": "노출 (7일)"
+      },
+      "clientsMonitored": "모니터링 중인 고객 {count}명",
+      "healthy": "양호",
+      "attention": "주의 필요",
+      "critical": "개입 필요",
+      "topProblems": "오늘 발견된 주요 문제",
+      "noProblems": "새로 발견된 문제가 없습니다.",
+      "toasts": {
+        "runFailed": "진단 실행에 실패했습니다",
+        "runComplete": "진단 완료: 추천 {count}건 생성됨"
+      }
+    },
+    "diagnostics": {
+      "title": "AI 진단",
+      "subtitle": "퍼포먼스 코파일럿의 데일리 브리핑",
+      "gateReason": "트래픽 관리",
+      "runDiagnostics": "진단 실행",
+      "running": "분석 중…",
+      "filters": {
+        "client": "고객",
+        "allClients": "모든 고객"
+      },
+      "briefing": "지난 24시간의 데이터를 분석했습니다. 주의가 필요한 항목이 {count}건 있습니다.",
+      "critical": "긴급 {count}건",
+      "highPriority": "높은 우선순위 {count}건",
+      "opportunities": "기회 {count}건",
+      "mainRecommendation": "오늘의 주요 추천",
+      "actions": {
+        "createCreative": "새 크리에이티브 만들기",
+        "viewFull": "전체 진단 보기"
+      },
+      "category": {
+        "creative_fatigue": "크리에이티브 피로도",
+        "landing_page": "랜딩 페이지",
+        "funnel": "퍼널",
+        "budget": "예산",
+        "alert": "경고"
+      },
+      "toasts": {
+        "runFailed": "진단 실행에 실패했습니다",
+        "runComplete": "진단 완료: 추천 {count}건 생성됨"
+      }
+    },
+    "recommendations": {
+      "title": "AI 추천",
+      "subtitle": "퍼포먼스 코파일럿이 생성한 모든 추천",
+      "alertsTitle": "경고",
+      "alertsSubtitle": "아직 검토되지 않은 긴급/높은 우선순위 문제",
+      "gateReason": "트래픽 관리",
+      "filters": {
+        "client": "고객",
+        "allClients": "모든 고객",
+        "status": "상태",
+        "allStatuses": "모든 상태"
+      },
+      "empty": "추천이 없습니다.",
+      "recommendedAction": "추천 조치",
+      "expectedImpact": "예상 효과",
+      "priority": {
+        "critical": "긴급",
+        "high": "높은 우선순위",
+        "medium": "중간 우선순위",
+        "low": "낮은 우선순위"
+      },
+      "category": {
+        "creative_fatigue": "크리에이티브 피로도",
+        "landing_page": "랜딩 페이지",
+        "funnel": "퍼널",
+        "budget": "예산",
+        "alert": "경고"
+      },
+      "status": {
+        "new": "신규",
+        "in_review": "검토 중",
+        "approved": "승인됨",
+        "in_progress": "실행 중",
+        "done": "완료됨",
+        "dismissed": "무시됨"
+      },
+      "actions": {
+        "review": "검토로 이동",
+        "approve": "승인",
+        "start": "실행 시작",
+        "complete": "완료",
+        "dismiss": "무시",
+        "createCreative": "새 크리에이티브 만들기",
+        "addToPlan": "최적화 계획에 추가"
+      },
+      "toasts": {
+        "actionFailed": "작업을 수행하지 못했습니다",
+        "updated": "추천이 업데이트되었습니다",
+        "addedToPlan": "최적화 계획에 추가되었습니다"
+      }
+    },
+    "accounts": {
+      "title": "광고 계정",
+      "subtitle": "등록된 고객에 연결된 유료 트래픽 계정",
+      "gateReason": "트래픽 관리",
+      "new": "새 계정",
+      "empty": "아직 등록된 광고 계정이 없습니다.",
+      "columns": {
+        "client": "고객",
+        "platform": "플랫폼",
+        "name": "이름",
+        "status": "상태"
+      },
+      "connectionStatus": {
+        "not_connected": "연결되지 않음",
+        "connected": "연결됨",
+        "error": "오류"
+      },
+      "dialog": {
+        "title": "새 광고 계정",
+        "description": "기존 고객에게 광고 계정을 연결합니다.",
+        "client": "고객",
+        "clientPlaceholder": "고객 선택",
+        "platform": "플랫폼",
+        "name": "계정 이름",
+        "namePlaceholder": "예: Meta Ads — 예시 클리닉",
+        "cancel": "취소",
+        "save": "저장",
+        "connectWithMeta": "Meta로 연결",
+        "connectWithMetaHint": "한 번의 클릭으로 광고 계정 중에서 선택하세요 — 입력할 필요가 없습니다.",
+        "connectWithMetaNeedsClient": "Meta로 연결하려면 위에서 고객을 선택하세요."
+      },
+      "deleteDialog": {
+        "title": "광고 계정 제거",
+        "description": "이 계정을 제거하시겠습니까? 연결된 캠페인과 지표도 함께 제거됩니다.",
+        "confirm": "제거"
+      },
+      "toasts": {
+        "missingFields": "고객과 계정 이름을 입력하세요",
+        "createError": "계정 생성에 실패했습니다",
+        "created": "계정이 생성되었습니다",
+        "deleteError": "계정 제거에 실패했습니다",
+        "deleted": "계정이 제거되었습니다",
+        "oauthConnected": "Meta 연결에 성공했습니다",
+        "oauthNoAdAccounts": "이 Meta 계정에서 광고 계정을 찾을 수 없습니다",
+        "oauthDenied": "연결이 취소되었습니다",
+        "oauthError": "Meta 연결에 실패했습니다"
+      },
+      "detail": {
+        "gateReason": "트래픽 관리",
+        "newCampaign": "새 캠페인",
+        "empty": "아직 등록된 캠페인이 없습니다.",
+        "notFound": "광고 계정을 찾을 수 없습니다.",
+        "columns": {
+          "name": "이름",
+          "objective": "목표",
+          "status": "상태",
+          "budget": "예산"
+        },
+        "dialog": {
+          "title": "새 캠페인",
+          "description": "이 광고 계정에 캠페인을 추가합니다.",
+          "name": "이름",
+          "objective": "목표",
+          "objectivePlaceholder": "예: 리드 생성",
+          "budget": "일일 예산",
+          "cancel": "취소",
+          "save": "저장"
+        },
+        "toasts": {
+          "missingFields": "캠페인 이름을 입력하세요",
+          "createError": "캠페인 생성에 실패했습니다",
+          "created": "캠페인이 생성되었습니다"
+        }
+      }
+    },
+    "campaigns": {
+      "detail": {
+        "gateReason": "트래픽 관리",
+        "newAdSet": "새 광고 세트",
+        "newAd": "새 광고",
+        "emptySets": "아직 등록된 광고 세트가 없습니다.",
+        "emptyAds": "이 세트에 광고가 없습니다.",
+        "notFound": "캠페인을 찾을 수 없습니다.",
+        "columns": {
+          "name": "이름",
+          "status": "상태",
+          "fatigue": "피로도"
+        },
+        "fatigueLevel": {
+          "healthy": "양호",
+          "monitor": "모니터링",
+          "test": "테스트 필요",
+          "replace": "교체 필요"
+        },
+        "setDialog": {
+          "title": "새 광고 세트",
+          "description": "이 캠페인에 광고 세트를 추가합니다.",
+          "name": "이름"
+        },
+        "adDialog": {
+          "title": "새 광고",
+          "description": "이 광고 세트에 광고/크리에이티브를 추가합니다.",
+          "name": "이름",
+          "headline": "제목/후크",
+          "launchedAt": "시작일"
+        },
+        "cancel": "취소",
+        "save": "저장",
+        "toasts": {
+          "createError": "생성에 실패했습니다",
+          "setCreated": "광고 세트가 생성되었습니다",
+          "adCreated": "광고가 생성되었습니다"
+        }
+      }
+    },
+    "metrics": {
+      "title": "지표",
+      "subtitle": "캠페인 지표 수동 입력 및 대량 가져오기",
+      "gateReason": "트래픽 관리",
+      "manualEntry": "수동 입력",
+      "fields": {
+        "entityType": "엔터티 유형",
+        "entity": "엔터티",
+        "entityPlaceholder": "선택",
+        "date": "날짜",
+        "impressions": "노출",
+        "reach": "도달",
+        "clicks": "클릭",
+        "spend": "투자 금액",
+        "leads": "리드",
+        "conversions": "전환",
+        "revenue": "매출",
+        "visits": "방문"
+      },
+      "entityTypes": {
+        "ad_account": "광고 계정",
+        "campaign": "캠페인",
+        "ad_set": "광고 세트",
+        "ad": "광고",
+        "landing_page": "랜딩 페이지"
+      },
+      "save": "지표 저장",
+      "csvImport": "대량 가져오기 (CSV)",
+      "csvHint": "예상 열: entity_type, entity_external_id_or_name, date, impressions, reach, clicks, spend, leads, conversions, revenue, visits.",
+      "import": "가져오기",
+      "importSummary": "{imported}건 가져옴, {errors}건 오류",
+      "lineError": "{line}번째 줄",
+      "toasts": {
+        "missingFields": "엔터티와 날짜를 선택하세요",
+        "saveError": "지표 저장에 실패했습니다",
+        "saved": "지표가 저장되었습니다",
+        "importError": "파일 가져오기에 실패했습니다",
+        "imported": "{count}건 가져옴"
+      }
+    },
+    "landingPages": {
+      "title": "랜딩 페이지",
+      "subtitle": "고객 캠페인에 사용되는 랜딩 페이지",
+      "gateReason": "트래픽 관리",
+      "new": "새 랜딩 페이지",
+      "empty": "아직 등록된 랜딩 페이지가 없습니다.",
+      "columns": {
+        "client": "고객",
+        "name": "이름",
+        "url": "URL"
+      },
+      "dialog": {
+        "title": "새 랜딩 페이지",
+        "description": "기존 고객에게 랜딩 페이지를 연결합니다.",
+        "client": "고객",
+        "clientPlaceholder": "고객 선택",
+        "name": "이름",
+        "url": "URL",
+        "notes": "메모",
+        "cancel": "취소",
+        "save": "저장"
+      },
+      "deleteDialog": {
+        "title": "랜딩 페이지 제거",
+        "description": "이 랜딩 페이지를 제거하시겠습니까?",
+        "confirm": "제거"
+      },
+      "toasts": {
+        "missingFields": "고객, 이름, URL을 입력하세요",
+        "createError": "랜딩 페이지 생성에 실패했습니다",
+        "created": "랜딩 페이지가 생성되었습니다",
+        "deleteError": "랜딩 페이지 제거에 실패했습니다",
+        "deleted": "랜딩 페이지가 제거되었습니다"
+      }
+    },
+    "optimizationPlan": {
+      "title": "최적화 계획",
+      "subtitle": "AI 추천에서 생성된 작업",
+      "gateReason": "트래픽 관리",
+      "status": {
+        "todo": "할 일",
+        "in_progress": "진행 중",
+        "done": "완료됨",
+        "cancelled": "취소됨"
+      },
+      "priority": {
+        "critical": "긴급",
+        "high": "높음",
+        "medium": "중간",
+        "low": "낮음"
+      },
+      "toasts": {
+        "updateError": "작업 업데이트에 실패했습니다"
+      }
+    },
+    "reports": {
+      "title": "리포트",
+      "subtitle": "고객 및 기간별 성과 요약",
+      "selectClient": "고객을 선택하세요",
+      "filters": {
+        "client": "고객",
+        "clientPlaceholder": "고객 선택",
+        "from": "시작일",
+        "to": "종료일"
+      },
+      "generate": "리포트 생성",
+      "summary": "기간 요약",
+      "stats": {
+        "spend": "투자 금액",
+        "leads": "리드",
+        "ctr": "CTR",
+        "cpl": "CPL",
+        "cpa": "CPA",
+        "roas": "ROAS",
+        "revenue": "매출",
+        "conversions": "전환"
+      },
+      "funnel": "영업 퍼널"
     }
   }
 }

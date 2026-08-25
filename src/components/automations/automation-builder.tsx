@@ -33,6 +33,7 @@ import {
   ArrowUp,
   MousePointerClick,
   List,
+  BrainCircuit,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -107,6 +108,7 @@ interface StepMeta {
 }
 
 const STEP_META: Record<AutomationStepType, StepMeta> = {
+  sales_qualify: { label: "sales_qualify", icon: BrainCircuit, border: "border-l-violet-500" },
   send_message: { label: "send_message", icon: MessageSquare, border: "border-l-primary" },
   send_buttons: { label: "send_buttons", icon: MousePointerClick, border: "border-l-primary" },
   send_list: { label: "send_list", icon: List, border: "border-l-primary" },
@@ -123,6 +125,7 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
 }
 
 const ADDABLE_STEPS: AutomationStepType[] = [
+  "sales_qualify",
   "send_message",
   "send_buttons",
   "send_list",
@@ -172,6 +175,8 @@ function asInteractive(cfg: Record<string, unknown>): InteractiveMessagePayload 
 
 function blankConfig(type: AutomationStepType): Record<string, unknown> {
   switch (type) {
+    case "sales_qualify":
+      return { mode: "suggestion" }
     case "send_message":
       return { text: "" }
     case "send_buttons":
@@ -1303,6 +1308,12 @@ function StepEditor({
     onChange({ ...step, step_config: { ...cfg, ...patch } })
 
   switch (step.step_type) {
+    case "sales_qualify":
+      return (
+        <div className="rounded-md border border-violet-500/30 bg-violet-500/5 p-3 text-xs text-muted-foreground">
+          {t("config.salesQualifyHint")}
+        </div>
+      )
     case "send_message":
       return (
         <FieldBlock label={t("config.messageText")}>
@@ -1530,6 +1541,8 @@ function FieldBlock({
 
 function previewFor(step: BuilderStep): string {
   switch (step.step_type) {
+    case "sales_qualify":
+      return "copiloto · somente sugestão"
     case "send_message":
       return (step.step_config.text as string) || "no text yet"
     case "send_buttons":

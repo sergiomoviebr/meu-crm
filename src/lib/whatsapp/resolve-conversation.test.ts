@@ -13,6 +13,9 @@ type ContactRow = { id: string; phone: string; name?: string | null };
 
 interface Script {
   config?: { user_id: string } | null; // whatsapp_config.maybeSingle
+  personalSession?: { id: string } | null; // whatsapp_personal_sessions.maybeSingle
+  /** accounts.owner_user_id — resolveAuditUserId's fallback when whatsapp_config has no owner. */
+  accountOwner?: string;
   contactCandidates?: ContactRow[]; // contacts .like (same every call)
   /** Per-call `.like` results — overrides contactCandidates. Lets a
    *  test simulate "miss, then hit" for the unique-race path. */
@@ -68,6 +71,13 @@ function makeDb(script: Script): SupabaseClient {
     maybeSingle: () => {
       if (table === 'whatsapp_config')
         return Promise.resolve({ data: script.config ?? null, error: null });
+      if (table === 'whatsapp_personal_sessions')
+        return Promise.resolve({ data: script.personalSession ?? null, error: null });
+      if (table === 'accounts')
+        return Promise.resolve({
+          data: script.accountOwner ? { owner_user_id: script.accountOwner } : null,
+          error: null,
+        });
       return Promise.resolve({ data: null, error: null });
     },
     single: () => {
@@ -205,6 +215,33 @@ describe('resolveConversationByPhone', () => {
       conversationId: 'cv-raced',
       contactId: 'c1',
       contactCreated: false,
+    });
+  });
+
+  describe('whatsapp_personal channel', () => {
+    it('fails with whatsapp_not_configured when no session is connected', async () => {
+      const db = makeDb({ personalSession: null });
+      await expect(
+        resolveConversationByPhone(db, 'acct', '+14155550123', null, 'whatsapp_personal')
+      ).rejects.toMatchObject({ code: 'whatsapp_not_configured' });
+    });
+
+    it('resolves against whatsapp_personal_sessions, not whatsapp_config, when connected', async () => {
+      const db = makeDb({
+        config: null, // Meta not configured — must not be consulted for this channel's connection check.
+        accountOwner: 'owner-1', // resolveAuditUserId's fallback when whatsapp_config has no owner.
+        personalSession: { id: 'sess1' },
+        contactCandidates: [{ id: 'c1', phone: '14155550123' }],
+        existingConversation: { id: 'cv1' },
+      });
+      const res = await resolveConversationByPhone(
+        db,
+        'acct',
+        '+14155550123',
+        null,
+        'whatsapp_personal'
+      );
+      expect(res).toEqual({ conversationId: 'cv1', contactId: 'c1', contactCreated: false });
     });
   });
 });

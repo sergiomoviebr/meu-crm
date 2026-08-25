@@ -10,6 +10,15 @@ export interface ProviderArgs {
   systemPrompt: string
   messages: ChatMessage[]
   timeoutMs: number
+  /** When 'json_object', OpenAI is asked to use native JSON mode
+   *  (`response_format`). Additive — every existing caller omits this
+   *  and is unaffected. Anthropic has no native JSON mode; its adapter
+   *  ignores this field and relies on prompt instructions instead. */
+  responseFormat?: 'json_object'
+  /** Overrides MAX_OUTPUT_TOKENS for callers that need a larger cap
+   *  (e.g. multi-item diagnostic JSON) than the reply assistant's
+   *  1024-token default. */
+  maxOutputTokens?: number
 }
 
 /**

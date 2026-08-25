@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   ACCOUNT_ROLES,
   type AccountRole,
+  canApproveContent,
+  canApproveOptimization,
   canDeleteAccount,
   canEditSettings,
+  canManageContent,
   canManageMembers,
+  canManageTraffic,
   canSendMessages,
   canTransferOwnership,
   canViewOnly,
@@ -126,5 +130,33 @@ describe("capability predicates", () => {
     expect(canTransferOwnership("admin")).toBe(false);
     expect(canTransferOwnership("agent")).toBe(false);
     expect(canTransferOwnership("viewer")).toBe(false);
+  });
+
+  it("canManageContent: agent+ only", () => {
+    expect(canManageContent("owner")).toBe(true);
+    expect(canManageContent("admin")).toBe(true);
+    expect(canManageContent("agent")).toBe(true);
+    expect(canManageContent("viewer")).toBe(false);
+  });
+
+  it("canApproveContent: admin+ only", () => {
+    expect(canApproveContent("owner")).toBe(true);
+    expect(canApproveContent("admin")).toBe(true);
+    expect(canApproveContent("agent")).toBe(false);
+    expect(canApproveContent("viewer")).toBe(false);
+  });
+
+  it("canManageTraffic: agent+ only", () => {
+    expect(canManageTraffic("owner")).toBe(true);
+    expect(canManageTraffic("admin")).toBe(true);
+    expect(canManageTraffic("agent")).toBe(true);
+    expect(canManageTraffic("viewer")).toBe(false);
+  });
+
+  it("canApproveOptimization: admin+ only", () => {
+    expect(canApproveOptimization("owner")).toBe(true);
+    expect(canApproveOptimization("admin")).toBe(true);
+    expect(canApproveOptimization("agent")).toBe(false);
+    expect(canApproveOptimization("viewer")).toBe(false);
   });
 });

@@ -8,8 +8,26 @@
 export interface ParsedContactRow {
   phone: string;
   name?: string;
+  preferredName?: string;
   email?: string;
   company?: string;
+  jobTitle?: string;
+  cpf?: string;
+  cnpj?: string;
+  whatsapp?: string;
+  secondaryPhone?: string;
+  birthDay?: number;
+  birthMonth?: number;
+  birthYear?: number;
+  addressZip?: string;
+  addressStreet?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  addressNeighborhood?: string;
+  addressCity?: string;
+  addressState?: string;
+  addressCountry?: string;
+  source?: string;
   /** Tag names from the optional `tags` column (comma/semicolon separated). */
   tagNames: string[];
 }
@@ -111,38 +129,82 @@ export function buildContactRows(
   headerCells: string[],
   dataRows: string[][]
 ): ParseContactCsvResult {
-  const headers = headerCells.map((h) => h.trim().toLowerCase().replace(/["']/g, ''));
+  const headers = headerCells.map(normalizeHeader);
 
-  const phoneIdx = headers.indexOf('phone');
+  const indexOf = (...names: string[]) =>
+    names
+      .map(normalizeHeader)
+      .map((name) => headers.indexOf(name))
+      .find((index) => index >= 0) ?? -1;
+  const valueAt = (values: string[], index: number) =>
+    index >= 0
+      ? values[index]?.replace(/["']/g, '').trim() || undefined
+      : undefined;
+
+  const phoneIdx = indexOf('phone', 'telefone', 'celular');
   if (phoneIdx === -1) {
     return { rows: [], hasTagsColumn: false, hasCompanyColumn: false };
   }
 
-  const nameIdx = headers.indexOf('name');
-  const emailIdx = headers.indexOf('email');
-  const companyIdx = headers.indexOf('company');
-  const tagsIdx = headers.indexOf('tags');
+  const nameIdx = indexOf('name', 'nome', 'nome completo');
+  const preferredNameIdx = indexOf('preferred_name', 'nome preferido');
+  const emailIdx = indexOf('email', 'e-mail');
+  const companyIdx = indexOf('company', 'empresa');
+  const jobTitleIdx = indexOf('job_title', 'cargo');
+  const cpfIdx = indexOf('cpf');
+  const cnpjIdx = indexOf('cnpj');
+  const whatsappIdx = indexOf('whatsapp');
+  const secondaryPhoneIdx = indexOf('secondary_phone', 'segundo telefone');
+  const birthDateIdx = indexOf(
+    'birth_date',
+    'data de nascimento',
+    'aniversario'
+  );
+  const zipIdx = indexOf('address_zip', 'cep');
+  const streetIdx = indexOf('address_street', 'endereco', 'rua');
+  const numberIdx = indexOf('address_number', 'numero');
+  const complementIdx = indexOf('address_complement', 'complemento');
+  const neighborhoodIdx = indexOf('address_neighborhood', 'bairro');
+  const cityIdx = indexOf('address_city', 'cidade');
+  const stateIdx = indexOf('address_state', 'estado', 'uf');
+  const countryIdx = indexOf('address_country', 'pais');
+  const sourceIdx = indexOf('source', 'origem');
+  const tagsIdx = indexOf('tags', 'etiquetas');
 
   const rows: ParsedContactRow[] = [];
 
   for (const values of dataRows) {
-    const phone = values[phoneIdx]?.replace(/["']/g, '').trim();
+    const phone = valueAt(values, phoneIdx);
     if (!phone) continue;
+
+    const birth = parseBirthDate(valueAt(values, birthDateIdx));
+    const extra = Object.fromEntries(
+      [
+        ['preferredName', valueAt(values, preferredNameIdx)],
+        ['jobTitle', valueAt(values, jobTitleIdx)],
+        ['cpf', valueAt(values, cpfIdx)],
+        ['cnpj', valueAt(values, cnpjIdx)],
+        ['whatsapp', valueAt(values, whatsappIdx)],
+        ['secondaryPhone', valueAt(values, secondaryPhoneIdx)],
+        ['addressZip', valueAt(values, zipIdx)],
+        ['addressStreet', valueAt(values, streetIdx)],
+        ['addressNumber', valueAt(values, numberIdx)],
+        ['addressComplement', valueAt(values, complementIdx)],
+        ['addressNeighborhood', valueAt(values, neighborhoodIdx)],
+        ['addressCity', valueAt(values, cityIdx)],
+        ['addressState', valueAt(values, stateIdx)],
+        ['addressCountry', valueAt(values, countryIdx)],
+        ['source', valueAt(values, sourceIdx)],
+      ].filter((entry) => entry[1] !== undefined)
+    );
 
     rows.push({
       phone,
-      name:
-        nameIdx >= 0
-          ? values[nameIdx]?.replace(/["']/g, '').trim() || undefined
-          : undefined,
-      email:
-        emailIdx >= 0
-          ? values[emailIdx]?.replace(/["']/g, '').trim() || undefined
-          : undefined,
-      company:
-        companyIdx >= 0
-          ? values[companyIdx]?.replace(/["']/g, '').trim() || undefined
-          : undefined,
+      name: valueAt(values, nameIdx),
+      email: valueAt(values, emailIdx),
+      company: valueAt(values, companyIdx),
+      ...extra,
+      ...birth,
       tagNames:
         tagsIdx >= 0 ? parseTagCell(values[tagsIdx]?.replace(/["']/g, '')) : [],
     });
@@ -152,6 +214,37 @@ export function buildContactRows(
     rows,
     hasTagsColumn: tagsIdx >= 0,
     hasCompanyColumn: companyIdx >= 0,
+  };
+}
+
+function normalizeHeader(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/["']/g, '')
+    .replace(/[\s-]+/g, '_');
+}
+
+function parseBirthDate(value?: string): {
+  birthDay?: number;
+  birthMonth?: number;
+  birthYear?: number;
+} {
+  if (!value) return {};
+  const parts = value.trim().split(/[\/-]/).map(Number);
+  if (parts.length < 2 || parts.some((part) => !Number.isInteger(part)))
+    return {};
+  const isoFirst = String(parts[0]).length === 4;
+  const year = isoFirst ? parts[0] : parts[2];
+  const month = isoFirst ? parts[1] : parts[1];
+  const day = isoFirst ? parts[2] : parts[0];
+  if (!day || !month || day > 31 || month > 12) return {};
+  return {
+    birthDay: day,
+    birthMonth: month,
+    ...(year && year >= 1900 ? { birthYear: year } : {}),
   };
 }
 

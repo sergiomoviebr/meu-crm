@@ -2,9 +2,14 @@
 
 import { useAuth } from "@/hooks/use-auth";
 import {
+  canApproveContent,
+  canApproveOptimization,
   canDeleteAccount,
   canEditSettings,
+  canManageContent,
   canManageMembers,
+  canManageTraffic,
+  canManageWhatsappPersonal,
   canSendMessages,
   canTransferOwnership,
   canViewOnly,
@@ -22,7 +27,12 @@ export type CanAction =
   | "send-messages"
   | "view-only"
   | "delete-account"
-  | "transfer-ownership";
+  | "transfer-ownership"
+  | "manage-content"
+  | "approve-content"
+  | "manage-traffic"
+  | "approve-optimization"
+  | "manage-whatsapp-personal";
 
 /**
  * Inline alternative to `<RequireRole>` for places that need a
@@ -54,6 +64,16 @@ export function useCan(action: CanAction): boolean {
       return canDeleteAccount(accountRole);
     case "transfer-ownership":
       return canTransferOwnership(accountRole);
+    case "manage-content":
+      return canManageContent(accountRole);
+    case "approve-content":
+      return canApproveContent(accountRole);
+    case "manage-traffic":
+      return canManageTraffic(accountRole);
+    case "approve-optimization":
+      return canApproveOptimization(accountRole);
+    case "manage-whatsapp-personal":
+      return canManageWhatsappPersonal(accountRole);
     default: {
       // Exhaustiveness check — adding a new `CanAction` without a
       // case here fails the typecheck because TS narrows `action`

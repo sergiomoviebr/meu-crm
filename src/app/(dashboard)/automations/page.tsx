@@ -15,6 +15,7 @@ import {
   Clock,
   Users,
   PhoneCall,
+  BrainCircuit,
   Loader2,
 } from "lucide-react"
 
@@ -43,12 +44,14 @@ import {
 import { AUTOMATION_TEMPLATES, type TemplateSlug } from "@/lib/automations/templates"
 import { triggerMeta, formatRelative } from "@/lib/automations/trigger-meta"
 import { cn } from "@/lib/utils"
+import { Textarea } from "@/components/ui/textarea"
 
 const TEMPLATE_ORDER: TemplateSlug[] = [
   "welcome_message",
   "out_of_office",
   "lead_qualifier",
   "follow_up_reminder",
+  "smart_sales_qualification",
 ]
 
 const TEMPLATE_ICON: Record<TemplateSlug, typeof Zap> = {
@@ -56,6 +59,7 @@ const TEMPLATE_ICON: Record<TemplateSlug, typeof Zap> = {
   out_of_office: Clock,
   lead_qualifier: Users,
   follow_up_reminder: PhoneCall,
+  smart_sales_qualification: BrainCircuit,
 }
 
 export default function AutomationsPage() {
@@ -66,6 +70,20 @@ export default function AutomationsPage() {
   const [error, setError] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<Automation | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [testOpen, setTestOpen] = useState(false)
+  const [testMessage, setTestMessage] = useState("")
+  const [testResult, setTestResult] = useState<Record<string, unknown> | null>(null)
+  const [testing, setTesting] = useState(false)
+
+  async function testQualification() {
+    setTesting(true)
+    setTestResult(null)
+    const response = await fetch('/api/automations/simulate-qualification', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: testMessage }) })
+    const body = await response.json().catch(() => ({}))
+    setTesting(false)
+    if (!response.ok) return toast.error(body.error ?? 'Falha ao testar qualificação.')
+    setTestResult(body.result)
+  }
 
   async function load() {
     try {
@@ -156,7 +174,7 @@ export default function AutomationsPage() {
     )
   }
 
-  const showTemplates = automations.length < 3
+  const showTemplates = true
 
   return (
     <div className="space-y-6">
@@ -167,6 +185,10 @@ export default function AutomationsPage() {
             {t("subtitle")}
           </p>
         </div>
+        <div className="flex gap-2">
+        <Button variant="outline" onClick={() => setTestOpen(true)}>
+          <BrainCircuit className="size-4" /> Testar qualificação
+        </Button>
         <GatedButton
           canAct={canCreate}
           gateReason="create automations"
@@ -176,12 +198,13 @@ export default function AutomationsPage() {
           <Plus className="h-4 w-4" />
           {t("create")}
         </GatedButton>
+        </div>
       </div>
 
       {showTemplates && (
         <section>
           <h2 className="mb-3 text-sm font-semibold text-muted-foreground">{t("templatesTitle")}</h2>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
             {TEMPLATE_ORDER.map((slug) => {
               const t = AUTOMATION_TEMPLATES[slug]
               const Icon = TEMPLATE_ICON[slug]
@@ -255,6 +278,22 @@ export default function AutomationsPage() {
               {t("delete")}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={testOpen} onOpenChange={setTestOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>Testar qualificação comercial</DialogTitle><DialogDescription>Simule uma resposta do lead. Nenhuma mensagem será enviada e nenhum contato será alterado.</DialogDescription></DialogHeader>
+          <Textarea rows={4} value={testMessage} onChange={(event) => setTestMessage(event.target.value)} placeholder="Ex.: Já tenho uma agência, mas os leads não estão virando vendas." />
+          {testResult && <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-4 text-sm">
+            <p><strong>Intenção:</strong> {String(testResult.intent)}</p>
+            <p><strong>Confiança:</strong> {Math.round(Number(testResult.confidence) * 100)}%</p>
+            <p><strong>Temperatura:</strong> {String(testResult.temperature)}</p>
+            <p><strong>Próxima ação:</strong> {String(testResult.nextAction)}</p>
+            <div className="rounded-md bg-card p-3"><p className="mb-1 text-xs font-semibold text-muted-foreground">RESPOSTA SUGERIDA</p><p>{String(testResult.suggestedReply)}</p></div>
+            {Boolean(testResult.humanHandoff) && <p className="font-medium text-amber-600">Atendimento humano recomendado.</p>}
+          </div>}
+          <DialogFooter><Button variant="outline" onClick={() => setTestOpen(false)}>Fechar</Button><Button onClick={() => void testQualification()} disabled={testing || !testMessage.trim()}>{testing ? <Loader2 className="size-4 animate-spin" /> : <BrainCircuit className="size-4" />} Analisar resposta</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

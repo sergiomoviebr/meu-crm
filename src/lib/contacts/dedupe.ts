@@ -1,5 +1,5 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { normalizePhone, phonesMatch } from "@/lib/whatsapp/phone-utils";
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { normalizePhone, phonesMatch } from '@/lib/whatsapp/phone-utils';
 
 /**
  * Contact de-duplication helpers, shared by the WhatsApp webhook, the
@@ -16,6 +16,22 @@ import { normalizePhone, phonesMatch } from "@/lib/whatsapp/phone-utils";
 /** Canonical de-dup key for a phone string (digits only). */
 export function normalizeKey(phone: string): string {
   return normalizePhone(phone);
+}
+
+/**
+ * WhatsApp display names are hints, not authority. Preserve a real CRM name
+ * and only replace a blank/phone-shaped fallback created during ingestion.
+ */
+export function shouldUseWhatsappName(
+  currentName: string | null | undefined,
+  phone: string,
+  whatsappName: string | null | undefined
+): boolean {
+  const hint = whatsappName?.trim();
+  if (!hint) return false;
+  const current = currentName?.trim();
+  if (!current) return true;
+  return normalizePhone(current) === normalizePhone(phone);
 }
 
 /** Minimal shape we need back from a contacts lookup. */
@@ -35,7 +51,7 @@ export interface ExistingContact {
 export async function findExistingContact(
   db: SupabaseClient,
   accountId: string,
-  phone: string,
+  phone: string
 ): Promise<ExistingContact | null> {
   const normalized = normalizePhone(phone);
   if (!normalized) return null;
@@ -43,15 +59,17 @@ export async function findExistingContact(
   const suffix = normalized.length >= 8 ? normalized.slice(-8) : normalized;
 
   const { data, error } = await db
-    .from("contacts")
-    .select("*")
-    .eq("account_id", accountId)
-    .like("phone", `%${suffix}`);
+    .from('contacts')
+    .select('*')
+    .eq('account_id', accountId)
+    .like('phone', `%${suffix}`);
 
   if (error || !data) return null;
 
   return (
-    (data as ExistingContact[]).find((c) => phonesMatch(c.phone, phone)) ?? null
+    (data as ExistingContact[]).find(
+      (c) => !c.deleted_at && phonesMatch(c.phone, phone)
+    ) ?? null
   );
 }
 
@@ -60,7 +78,10 @@ export async function findExistingContact(
  * `phone` (vs only a fuzzy trunk-variant match). The form hard-blocks
  * exact matches but only warns on fuzzy ones.
  */
-export function isExactMatch(existing: ExistingContact, phone: string): boolean {
+export function isExactMatch(
+  existing: ExistingContact,
+  phone: string
+): boolean {
   return normalizeKey(existing.phone) === normalizeKey(phone);
 }
 
@@ -70,8 +91,8 @@ export function isExactMatch(existing: ExistingContact, phone: string): boolean 
  * format-equal insert that slipped past the in-app check.
  */
 export function isUniqueViolation(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  return (error as { code?: string }).code === "23505";
+  if (!error || typeof error !== 'object') return false;
+  return (error as { code?: string }).code === '23505';
 }
 
 /**
@@ -81,7 +102,7 @@ export function isUniqueViolation(error: unknown): boolean {
  * count removed as in-file duplicates.
  */
 export function dedupeByPhone<T extends { phone: string }>(
-  rows: T[],
+  rows: T[]
 ): { unique: T[]; duplicates: number } {
   const seen = new Set<string>();
   const unique: T[] = [];

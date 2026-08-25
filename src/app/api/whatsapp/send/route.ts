@@ -212,6 +212,7 @@ async function findOrCreateConversation(
     .select('id')
     .eq('account_id', accountId)
     .eq('contact_id', contactId)
+    .eq('channel', 'meta_cloud_api')
     .maybeSingle()
 
   if (existing) return existing.id
@@ -222,6 +223,7 @@ async function findOrCreateConversation(
       account_id: accountId,
       user_id: userId,
       contact_id: contactId,
+      channel: 'meta_cloud_api',
     })
     .select('id')
     .single()
